@@ -1,0 +1,5 @@
+#Ignore the Netrw history file:
+.netrwhist
+
+#Ignore the viminfo file:
+viminfo

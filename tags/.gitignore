@@ -1,0 +1,5 @@
+#Ignore .tags files:
+*.tags
+
+#Do not ignore this file:
+!.gitignore

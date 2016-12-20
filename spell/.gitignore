@@ -1,0 +1,5 @@
+#Ignore .spl files:
+*.spl
+
+#Do not ignore this file:
+!.gitignore
