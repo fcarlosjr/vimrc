@@ -150,7 +150,7 @@ set viminfo+=n$HOME/.vim/viminfo
 set completeopt+=longest
 
 "Adds suffixes to extend file searches using commands like 'gf': 
-set suffixesadd+=.c,.cpp,.h,.hpp,.java,.py,.sh
+set suffixesadd+=.c,.cpp,.h,.hpp,.java,.py,.m,.sh
 
 "Highlight matching characters as they are entered in a search:
 set hlsearch
@@ -229,7 +229,7 @@ augroup SmartDoc
 augroup END
 
 function s:MakeDoc(nested_syntax, comment_pattern, dir_path)
-	silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>/dev/null &' | redraw! | echo 'Makedoc started in background'
+	silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
 endfunction
 
 "Autoset spell checking for certain filetypes:
@@ -259,6 +259,7 @@ augroup SmartPath
 	autocmd Filetype * setlocal path=./**,**
 	autocmd Filetype c,cpp call s:SetCppPath()
 	autocmd Filetype python call s:SetPythonPath()
+	autocmd Filetype matlab call s:SetMatlabPath()
 augroup END
 
 function s:SetCppPath()
@@ -272,12 +273,17 @@ function s:SetPythonPath()
 	execute 'setlocal path=./**,**,'.pydir
 endfunction
 
+function s:SetMatlabPath()
+	setlocal path=./**,**,/usr/share/octave/**
+endfunction
+
 "Add filetype-specific library tags to the tags path:
 augroup SmartTagsPath
 	autocmd!
 	autocmd Filetype * setlocal tags=./.tags;$HOME
 	autocmd Filetype c,cpp setlocal tags=./.tags;$HOME,$HOME/.vim/tags/cpp.tags
 	autocmd Filetype python setlocal tags=./.tags;$HOME,$HOME/.vim/tags/python3.tags
+	autocmd Filetype matlab setlocal tags=./.tags;$HOME,$HOME/.vim/tags/octave.tags
 augroup END
 
 "Create filetype-specific custom commands for generating tags:
@@ -286,6 +292,7 @@ augroup SmartTagsCommand
 	autocmd Filetype * call s:DeleteTagsCommand()
 	autocmd Filetype c,cpp call s:MakeCppTags()
 	autocmd Filetype python call s:MakePythonTags()
+	autocmd Filetype matlab call s:MakeMatlabTags()
 augroup END
 
 function s:DeleteTagsCommand()
@@ -299,15 +306,21 @@ function s:DeleteTagsCommand()
 endfunction
 
 function s:MakeCppTags()
-	command -buffer Makebasetags silent execute '!(CPPVER=$(g++ -dumpversion) && CPPTARGET=$(g++ -dumpmachine) && ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extra=+q --langmap=c++:+.tcc. --excmd=number -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" /usr/include/c++/$CPPVER/* /usr/include/c++/$CPPVER/bits/* /usr/include/c++/$CPPVER/ext/* /usr/include/$CPPTARGET/c++/$CPPVER/bits/* /usr/include/$CPPTARGET/c++/$CPPVER/ext/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include-fixed/* && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>/dev/null &' | redraw! | echo 'Makebasetags started in background'
+	command -buffer Makebasetags silent execute '!(CPPVER=$(g++ -dumpversion) && CPPTARGET=$(g++ -dumpmachine) && ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extra=+q --langmap=c++:+.tcc. --excmd=number -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" /usr/include/c++/$CPPVER/* /usr/include/c++/$CPPVER/bits/* /usr/include/c++/$CPPVER/ext/* /usr/include/$CPPTARGET/c++/$CPPVER/bits/* /usr/include/$CPPTARGET/c++/$CPPVER/ext/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include-fixed/* && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extra=+q --langmap=c++:+.tcc. --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>/dev/null &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extra=+q --langmap=c++:+.tcc. --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 function s:MakePythonTags()
-	command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>/dev/null &' | redraw! | echo 'Makebasetags started in background'
+	command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>/dev/null &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+endfunction
+
+function s:MakeMatlabTags()
+	command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/octave.tags~ --languages=matlab --excmd=number --recurse=yes /usr/share/octave && rm -f $HOME/.vim/tags/octave.tags && mv $HOME/.vim/tags/octave.tags~ $HOME/.vim/tags/octave.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+
+	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=matlab --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 "Automatically close the preview window at the end of omni completion:
@@ -341,10 +354,60 @@ augroup SmartCompiler
 	autocmd Filetype * setlocal errorformat& makeprg&
 	autocmd Filetype c,cpp compiler gcc
 	autocmd Filetype python compiler pyunit
-	autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex
+	autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex | call s:SetTexCompiler()
 	autocmd Filetype context let b:tex_flavor='context' | compiler tex
-	autocmd Filetype tex let b:tex_flavor='latex' | compiler tex
+	autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:SetTexCompiler()
 augroup END
+
+function s:SetTexCompiler()
+	"Push file to file stack:
+	setlocal errorformat=%-P**%f
+	setlocal errorformat+=%-P**\"%f\"
+
+	"Match errors:
+	setlocal errorformat+=%E!\ LaTeX\ %trror:\ %m
+	setlocal errorformat+=%E%f:%l:\ %m
+	setlocal errorformat+=%E!\ %m
+
+	"More info for undefined control sequences:
+	setlocal errorformat+=%Z<argument>\ %m
+
+	"More info for some errors:
+	setlocal errorformat+=%Cl.%l\ %m
+
+	"Show warnings:
+	setlocal errorformat+=%+WLaTeX\ %.%#Warning:\ %.%#line\ %l%.%#
+	setlocal errorformat+=%+W%.%#\ at\ lines\ %l--%*\\d
+	setlocal errorformat+=%+WLaTeX\ %.%#Warning:\ %m
+	setlocal errorformat+=%+WPackage\ natbib\ Warning:\ %m\ on\ input\ line\ %l%.
+	setlocal errorformat+=%+W%.%#%.%#Warning:\ %m
+
+	"Parse Biblatex warnings:
+	setlocal errorformat+=%-C(biblatex)%.%#in\ t%.%#
+	setlocal errorformat+=%-C(biblatex)%.%#Please\ v%.%#
+	setlocal errorformat+=%-C(biblatex)%.%#LaTeX\ a%.%#
+	setlocal errorformat+=%-Z(biblatex)%m
+
+	"Parse babel warnings:
+	setlocal errorformat+=%-Z(babel)%.%#input\ line\ %l.
+	setlocal errorformat+=%-C(babel)%m
+
+	"Parse Hyperref warnings:
+	setlocal errorformat+=%-C(hyperref)%.%#on\ input\ line\ %l.
+	setlocal errorformat+=%-C(hyperref)%m
+
+	"Parse more warnings:
+	setlocal errorformat+=%-C(scrreprt)%m
+	setlocal errorformat+=%-C(fixltx2e)%m
+	setlocal errorformat+=%-C(titlesec)%m
+	setlocal errorformat+=%-C(Font)%m
+
+	"Ignores unmatched lines:
+	setlocal errorformat+=%-G%.%#
+
+	"Sets the make command to call latexmk:
+	execute 'setlocal makeprg=latexmk\ -file-line-error\ -interaction=nonstopmode\ -pdf\ '.expand('%:p')
+endfunction
 
 "Add some custom 'smart alignment' to C/C++ files:
 augroup SmartAlignment
