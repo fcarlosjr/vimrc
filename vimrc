@@ -188,6 +188,12 @@ let g:compiler_gcc_ignore_unmatched_lines=1
 let g:tex_fold_enabled=1    "Enables folding of chapters, sections etc.
 let g:tex_comment_nospell=1 "Disables spell checking in comments
 
+"Tweaks markdown files (enables fenced code block syntax highlighting):
+let g:markdown_fenced_languages = ['vim', 'java', 'cpp', 'python', 'octave=matlab', 'latex=tex', 'sh', 'php']
+
+"Tweaks rst files (enables fenced code block syntax highlighting):
+let g:rst_syntax_code_list = ['vim', 'java', 'cpp', 'python', 'sh', 'php']
+
 "Tweaks sh files (sets the maximum level of folding):
 let g:sh_fold_enabled=7
 
@@ -224,7 +230,7 @@ augroup SmartSuffixes
 	autocmd!
 	autocmd Filetype c,cpp setlocal suffixesadd=.c,.cpp,.h,.hpp
 	autocmd Filetype sh setlocal suffixesadd=.sh
-	autocmd Filetype plaintex,tex setlocal suffixesadd=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
+	autocmd Filetype tex setlocal suffixesadd=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
 augroup END
 
 "Create filetype-specific custom commands for extracting code documentation:
@@ -291,7 +297,7 @@ augroup SmartCompiler
 	autocmd Filetype c,cpp compiler gcc
 	autocmd Filetype python compiler pyunit
 	autocmd Filetype context let b:tex_flavor='context' | compiler tex
-	autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex | call s:SetTexCompiler()
+	autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex
 	autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:SetTexCompiler()
 augroup END
 
@@ -352,7 +358,7 @@ augroup SmartPath
 	autocmd Filetype c,cpp call s:SetCppPath()
 	autocmd Filetype python call s:SetPythonPath()
 	autocmd Filetype matlab call s:SetMatlabPath()
-	autocmd Filetype plaintex,tex call s:SetLatexPath()
+	autocmd Filetype tex call s:SetLatexPath()
 augroup END
 
 function s:SetCppPath()
@@ -390,7 +396,7 @@ augroup SmartTagsCommand
 	autocmd Filetype c,cpp call s:MakeCppTags()
 	autocmd Filetype python call s:MakePythonTags()
 	autocmd Filetype matlab setlocal iskeyword+=. | call s:MakeMatlabTags()
-	autocmd Filetype plaintex,tex setlocal iskeyword+=-,: | call s:MakeLatexTags()
+	autocmd Filetype tex setlocal iskeyword+=-,: | call s:MakeLatexTags()
 augroup END
 
 function s:DeleteTagsCommand()
