@@ -41,7 +41,10 @@ set copyindent
 set nopreserveindent
 set noshiftround
 
-"Disables tab expansion to space characters:
+"Set indentation width to 4 spaces and disable tab expansion to space characters:
+set tabstop=4
+set shiftwidth=4
+set softtabstop=0
 set noexpandtab
 
 "Sets custom symbols for hidden characters when 'list' option is set:
@@ -67,7 +70,7 @@ set virtualedit=block
 "Enable persistent status line and edit its content:
 set laststatus=2
 set statusline=                 "clear statusline
-set statusline+=%-6.([%n%M]%)\  "buffer number and modified flag  
+set statusline+=%-6.([%n%M]%)\  "buffer number and modified flag
 set statusline+=%<%f\           "relative file path
 set statusline+=%=\             "right alignment marker
 set statusline+=%4.(%l,%)       "current line number
@@ -95,11 +98,25 @@ set display+=lastline
 set wrap
 set linebreak
 
+"Sets the maximum line width, in columns, when doing manual formatting:
+set textwidth=79
+
+"Disable automatic formatting of text and comments:
+set formatoptions-=t
+set formatoptions-=c
+set formatoptions-=l
+
+"Enables manual formatting of comments:
+set formatoptions+=q
+
+"Automatically inserts the comment character when editing comment lines:
+set formatoptions+=ro
+
+"Deletes the comment character when joining comment lines:
+set formatoptions+=j
+
 "Appends only one extra space when joining lines:
 set nojoinspaces
-
-"Deletes comment character when joining comment lines:
-set formatoptions+=j
 
 "Enables reporting of all changes in the file:
 set report=0
@@ -111,7 +128,7 @@ set history=1000
 set confirm
 
 "Lists all tab-completion matching files above the command menu:
-set wildmode=list:longest,full
+set wildmode=list:longest
 
 "Set file patterns to be ignored on file-related tasks:
 set wildignore=*~,*.swp,*.bak,*.tmp,*/tmp/**
@@ -161,9 +178,6 @@ highlight! link Search IncSearch
 set ignorecase
 set smartcase
 
-"Adjusts the case of a suggested word to that of the typed text on autocompletion: 
-set infercase
-
 "Open split panes to right and bottom:
 set splitright
 set splitbelow
@@ -197,7 +211,7 @@ let g:rst_syntax_code_list = ['vim', 'java', 'cpp', 'python', 'sh', 'php']
 "Tweaks sh files (sets the maximum level of folding):
 let g:sh_fold_enabled=7
 
-"Tweaks vim files (enables folding of augroups and functions): 
+"Tweaks vim files (enables folding of augroups and functions):
 let g:vimsyn_folding='af'
 
 "Tweak the Netrw file finder:
@@ -225,6 +239,12 @@ set pastetoggle=<F2>
 "--------------
 "Auto commands:
 "--------------
+"Overwrite filetype-specific format options:
+augroup FormatOptionsOverwrite
+	autocmd!
+	autocmd Filetype * setlocal formatoptions-=t | setlocal formatoptions-=c | setlocal formatoptions-=l | setlocal formatoptions+=qroj
+augroup END
+
 "Add filetype-specific suffixes to extend file searches using commands like 'gf':
 augroup SmartSuffixes
 	autocmd!
@@ -243,6 +263,13 @@ augroup END
 function s:MakeDoc(nested_syntax, comment_pattern, dir_path)
 	silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
 endfunction
+
+"Adjust the case of a suggested word to that of the typed text on autocompletion for certain filetypes:
+augroup SmartInferCase
+	autocmd!
+	autocmd Filetype * setlocal noinfercase
+	autocmd Filetype text,plaintex,context,tex,asciidoc,rst,markdown,gitcommit,mail setlocal infercase
+augroup END
 
 "Autoset spell checking for certain filetypes:
 augroup SmartSpell
