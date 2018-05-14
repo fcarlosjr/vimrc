@@ -321,12 +321,24 @@ endfunction
 augroup SmartCompiler
 	autocmd!
 	autocmd Filetype * setlocal errorformat& makeprg&
-	autocmd Filetype c,cpp compiler gcc
+	autocmd Filetype c,cpp compiler gcc | call s:SetCppCompiler()
 	autocmd Filetype python compiler pyunit
 	autocmd Filetype context let b:tex_flavor='context' | compiler tex
 	autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex
 	autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:SetTexCompiler()
 augroup END
+
+function s:SetCppCompiler()
+	setlocal errorformat=%f:%l:%c:\ fatal\ %trror:\ %m
+	setlocal errorformat+=%f:%l:%c:\ %trror:\ %m
+	setlocal errorformat+=%f:%l:%c:\ %tarning:\ %m
+	setlocal errorformat+=%.%#/ld:\ %m
+	setlocal errorformat+=ld:\ %m
+	setlocal errorformat+=%o:\(%*[^\)]\):\ %m
+	setlocal errorformat+=%D%*\\a[%*\\d]:\ Entering\ directory\ '%f'
+	setlocal errorformat+=%X%*\\a[%*\\d]:\ Leaving\ directory\ '%f'
+	setlocal errorformat+=%-G%.%#
+endfunction
 
 function s:SetTexCompiler()
 	"Push file to file stack:
@@ -376,6 +388,44 @@ function s:SetTexCompiler()
 
 	"Sets the make command to call latexmk:
 	execute 'setlocal makeprg=latexmk\ -file-line-error\ -interaction=nonstopmode\ -pdf\ '.expand('%:t')
+endfunction
+
+"Sort the quickfix content and remove duplicates:
+augroup SmartQuickFix
+	autocmd!
+	autocmd QuickFixCmdPost * call s:UniquifyQuickfix()
+augroup END
+
+function s:UniquifyQuickfix()
+	let filtpattern='^\a\+\[\d\+\]: Entering\|Leaving directory ''.\+'''
+	let sortedlist=filter(getqflist(),"v:val['text'] !~# filtpattern")
+	let sortedlist=sort(sortedlist,'s:SortQuickfix')
+
+	let uniquedlist=[]
+	let last=[]
+	for entry in sortedlist
+		let this=[entry.bufnr,entry.lnum,entry.col,entry.text]
+		if this[0:2] !=# last[0:2]
+			call add(uniquedlist,entry)
+			let last=this
+		elseif this[0:2] == [0,0,0] && this[3] !=# last[3]
+			call add(uniquedlist,entry)
+			let last=this
+		endif
+	endfor
+
+	call setqflist(uniquedlist)
+	redraw
+endfunction
+
+function s:SortQuickfix(entry1, entry2)
+	if a:entry1.bufnr == 0 || a:entry2.bufnr == 0
+		return 0
+	elseif a:entry1.bufnr == a:entry2.bufnr
+		return a:entry1.lnum == a:entry2.lnum ? 0 : (a:entry1.lnum < a:entry2.lnum ? -1 : 1)
+	else
+		return a:entry1.bufnr < a:entry2.bufnr ? -1 : 1
+	endif
 endfunction
 
 "Add filetype-specific library directories to the search path:
@@ -437,9 +487,9 @@ function s:DeleteTagsCommand()
 endfunction
 
 function s:MakeCppTags()
-	command -buffer Makebasetags silent execute '!(CPPVER=$(g++ -dumpversion) && CPPTARGET=$(g++ -dumpmachine) && ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extra=+q --langmap=c++:+.tcc. --excmd=number -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" /usr/include/c++/$CPPVER/* /usr/include/c++/$CPPVER/bits/* /usr/include/c++/$CPPVER/ext/* /usr/include/$CPPTARGET/c++/$CPPVER/bits/* /usr/include/$CPPTARGET/c++/$CPPVER/ext/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include-fixed/* && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+	command -buffer Makebasetags silent execute '!(CPPVER=$(g++ -dumpversion) && CPPTARGET=$(g++ -dumpmachine) && ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --excmd=number -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" /usr/include/c++/$CPPVER/* /usr/include/c++/$CPPVER/bits/* /usr/include/c++/$CPPVER/ext/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include-fixed/* && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extra=+q --langmap=c++:+.tcc. --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 function s:MakePythonTags()
