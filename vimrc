@@ -404,11 +404,11 @@ function s:UniquifyQuickfix()
 	let uniquedlist=[]
 	let last=[]
 	for entry in sortedlist
-		let this=[entry.bufnr,entry.lnum,entry.col,entry.text]
+		let this=[entry.bufnr,entry.lnum,entry.col,entry.module,entry.text]
 		if this[0:2] !=# last[0:2]
 			call add(uniquedlist,entry)
 			let last=this
-		elseif this[0:2] == [0,0,0] && this[3] !=# last[3]
+		elseif this[0:2] == [0,0,0] && this[3:4] !=# last[3:4]
 			call add(uniquedlist,entry)
 			let last=this
 		endif
@@ -419,12 +419,20 @@ function s:UniquifyQuickfix()
 endfunction
 
 function s:SortQuickfix(entry1, entry2)
-	if a:entry1.bufnr == 0 || a:entry2.bufnr == 0
-		return 0
-	elseif a:entry1.bufnr == a:entry2.bufnr
+	if a:entry1.bufnr != 0 && a:entry2.bufnr != 0 && a:entry1.bufnr == a:entry2.bufnr
 		return a:entry1.lnum == a:entry2.lnum ? 0 : (a:entry1.lnum < a:entry2.lnum ? -1 : 1)
-	else
+
+	elseif a:entry1.bufnr != 0 && a:entry2.bufnr != 0
 		return a:entry1.bufnr < a:entry2.bufnr ? -1 : 1
+
+	elseif a:entry1.module != '' && a:entry2.module != '' && a:entry1.module == a:entry2.module
+		return a:entry1.text == a:entry2.text ? 0 : (a:entry1.text < a:entry2.text ? -1 : 1)
+
+	elseif a:entry1.module != '' && a:entry2.module != ''
+		return a:entry1.module < a:entry2.module ? -1 : 1
+
+	else
+		return 0
 	endif
 endfunction
 
