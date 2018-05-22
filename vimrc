@@ -13,6 +13,9 @@ set lazyredraw
 "Preserves unsaved changes, markers and undo history of inactive buffers:
 set hidden
 
+"Prepends '*' and '+' as the main registers for accessing the clipboard:
+set clipboard^=unnamed,unnamedplus
+
 "Extends Vim's compatibility to different end-of-file formats:
 set fileformats=unix,dos,mac
 
@@ -109,10 +112,11 @@ set formatoptions-=l
 "Enables manual formatting of comments:
 set formatoptions+=q
 
-"Automatically inserts the comment character when editing comment lines:
-set formatoptions+=ro
+"Automatically insert the comment character only in insert mode:
+set formatoptions+=r
+set formatoptions-=o
 
-"Deletes the comment character when joining comment lines:
+"Automatically deletes the comment character when joining comment lines:
 set formatoptions+=j
 
 "Appends only one extra space when joining lines:
@@ -239,18 +243,26 @@ set pastetoggle=<F2>
 "--------------
 "Auto commands:
 "--------------
+"Load some plugins for certain filetypes:
+augroup SmartPlugin
+	autocmd!
+	let s:loadplugins=&loadplugins
+	autocmd Filetype c,cpp if s:loadplugins | packadd termdebug | endif
+augroup END
+
 "Overwrite filetype-specific format options:
 augroup FormatOptionsOverwrite
 	autocmd!
-	autocmd Filetype * setlocal formatoptions-=t | setlocal formatoptions-=c | setlocal formatoptions-=l | setlocal formatoptions+=qroj
+	autocmd Filetype * setlocal formatoptions<
 augroup END
 
 "Add filetype-specific suffixes to extend file searches using commands like 'gf':
 augroup SmartSuffixes
 	autocmd!
-	autocmd Filetype c,cpp setlocal suffixesadd=.c,.cpp,.h,.hpp
-	autocmd Filetype sh setlocal suffixesadd=.sh
-	autocmd Filetype tex setlocal suffixesadd=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
+	autocmd Filetype * setlocal suffixesadd<
+	autocmd Filetype c,cpp setlocal suffixesadd+=.c,.cpp,.h,.hpp
+	autocmd Filetype sh setlocal suffixesadd+=.sh
+	autocmd Filetype tex setlocal suffixesadd+=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
 augroup END
 
 "Create filetype-specific custom commands for extracting code documentation:
@@ -267,16 +279,16 @@ endfunction
 "Adjust the case of a suggested word to that of the typed text on autocompletion for certain filetypes:
 augroup SmartInferCase
 	autocmd!
-	autocmd Filetype * setlocal noinfercase
+	autocmd Filetype * setlocal infercase<
 	autocmd Filetype text,plaintex,context,tex,asciidoc,rst,markdown,gitcommit,mail setlocal infercase
 augroup END
 
-"Autoset spell checking for certain filetypes:
+"Set spell checking for certain filetypes:
 augroup SmartSpell
 	autocmd!
-	autocmd Filetype * setlocal nospell
-	autocmd FileType text,plaintex,context,tex,asciidoc,rst,markdown,gitcommit,mail setlocal spell
-	autocmd FileType help setlocal nospell
+	autocmd Filetype * setlocal spell<
+	autocmd Filetype help if &l:buftype ==# 'help' | setlocal nospell | endif
+	autocmd Filetype text,plaintex,context,tex,asciidoc,rst,markdown,gitcommit,mail setlocal spell
 augroup END
 
 "Restore the last cursor position when opening a buffer:
@@ -289,38 +301,38 @@ augroup END
 augroup StatusColor
 	autocmd!
 	autocmd InsertEnter * highlight! link StatusLine ErrorMsg | setlocal timeoutlen=0
-	autocmd InsertLeave * highlight! link StatusLine NONE | setlocal timeoutlen&
+	autocmd InsertLeave * highlight! link StatusLine NONE | setlocal timeoutlen<
 augroup END
 
-"Automatically close the preview window at the end of omni completion:
+"Close the preview window at the end of omni completion:
 augroup ClosePreview
 	autocmd!
 	autocmd CompleteDone * pclose
 augroup END
 
-"Update filetype-specific automatic folding on certain events, switching to manual folding afterwards:
+"Update filetype-specific automatic folding on certain events:
 augroup SmartFolding
 	autocmd!
 	autocmd WinEnter,BufWinEnter,BufWritePost * call s:UpdateFolding()
 augroup END
 
 function s:UpdateFolding()
-	if !&diff
+	if !&l:diff
 		let indenttypes=['make', 'python']
-		if index(indenttypes, &filetype) < 0
+		if index(indenttypes, &l:filetype) < 0
 			setlocal foldmethod=syntax
 		else
 			setlocal foldmethod=indent
 		endif
 		redraw
-		setlocal foldmethod=manual
+		setlocal foldmethod<
 	endif
 endfunction
 
 "Set filetype-specific compiler options:
 augroup SmartCompiler
 	autocmd!
-	autocmd Filetype * setlocal errorformat& makeprg&
+	autocmd Filetype * setlocal errorformat< makeprg<
 	autocmd Filetype c,cpp compiler gcc | call s:SetCppCompiler()
 	autocmd Filetype python compiler pyunit
 	autocmd Filetype context let b:tex_flavor='context' | compiler tex
@@ -439,7 +451,7 @@ endfunction
 "Add filetype-specific library directories to the search path:
 augroup SmartPath
 	autocmd!
-	autocmd Filetype * setlocal path=./**,**
+	autocmd Filetype * setlocal path<
 	autocmd Filetype c,cpp call s:SetCppPath()
 	autocmd Filetype python call s:SetPythonPath()
 	autocmd Filetype matlab call s:SetMatlabPath()
@@ -449,35 +461,36 @@ augroup END
 function s:SetCppPath()
 	silent let cppver=substitute(system('g++ -dumpversion'),'\n\+$','','')
 	silent let cpptarget=substitute(system('g++ -dumpmachine'),'\n\+$','','')
-	execute 'setlocal path=./**,**,/usr/include/c++/'.cppver.',/usr/include/c++/'.cppver.'/bits,/usr/include/c++/'.cppver.'/ext,/usr/include/'.cpptarget.'/c++/'.cppver.'/bits,/usr/include/'.cpptarget.'/c++/'.cppver.'/ext,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include-fixed'
+	execute 'setlocal path+=/usr/include/c++/'.cppver.',/usr/include/c++/'.cppver.'/bits,/usr/include/c++/'.cppver.'/ext,/usr/include/'.cpptarget.'/c++/'.cppver.'/bits,/usr/include/'.cpptarget.'/c++/'.cppver.'/ext,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include-fixed'
 endfunction
 
 function s:SetPythonPath()
 	silent let pydir=substitute(system('python3 -c "import os, sys; print('',''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','','')
-	execute 'setlocal path=./**,**,'.pydir
+	execute 'setlocal path+='.pydir
 endfunction
 
 function s:SetMatlabPath()
-	setlocal path=./**,**,/usr/share/octave/**
+	setlocal path+=/usr/share/octave/**
 endfunction
 
 function s:SetLatexPath()
-	setlocal path=./**,**,/usr/share/texlive/texmf-dist/tex/latex/**,/usr/share/texlive/texmf-dist/bibtex/**,/usr/share/texlive/texmf-dist/makeindex/**
+	setlocal path+=/usr/share/texlive/texmf-dist/tex/latex/**,/usr/share/texlive/texmf-dist/bibtex/**,/usr/share/texlive/texmf-dist/makeindex/**
 endfunction
 
 "Add filetype-specific library tags to the tags path:
 augroup SmartTagsPath
 	autocmd!
-	autocmd Filetype * setlocal tags=./.tags;$HOME
-	autocmd Filetype c,cpp setlocal tags=./.tags;$HOME,$HOME/.vim/tags/cpp.tags
-	autocmd Filetype python setlocal tags=./.tags;$HOME,$HOME/.vim/tags/python3.tags
-	autocmd Filetype matlab setlocal tags=./.tags;$HOME,$HOME/.vim/tags/octave.tags
+	autocmd Filetype * setlocal tags<
+	autocmd Filetype c,cpp setlocal tags+=$HOME/.vim/tags/cpp.tags
+	autocmd Filetype python setlocal tags+=$HOME/.vim/tags/python3.tags
+	autocmd Filetype matlab setlocal tags+=$HOME/.vim/tags/octave.tags
 augroup END
 
 "Create filetype-specific custom commands for generating tags:
 augroup SmartTagsCommand
 	autocmd!
-	autocmd Filetype * setlocal iskeyword& | call s:DeleteTagsCommand()
+	autocmd Filetype * setlocal iskeyword< | call s:DeleteTagsCommand()
+	autocmd Filetype help if &l:buftype ==# 'help' | setlocal iskeyword=!-~,^*,^\|,^\",192-255 | endif
 	autocmd Filetype c,cpp call s:MakeCppTags()
 	autocmd Filetype python call s:MakePythonTags()
 	autocmd Filetype matlab setlocal iskeyword+=. | call s:MakeMatlabTags()
@@ -513,7 +526,7 @@ function s:MakeMatlabTags()
 endfunction
 
 function s:MakeLatexTags()
-	silent let s:ctagslangdefs='
+	let ctagslangdefs='
 		\ --langdef=latex
 		\ --langmap=latex:.tex
 		\ --regex-latex=''/\\label[ \t]*\*?\{[ \t]*([^}]*)\}/\1/l,label/''
@@ -522,12 +535,12 @@ function s:MakeLatexTags()
 		\ --langmap=bibtex:.bib
 		\ --regex-bibtex=''/^@[A-Za-z]+\{([^,]*)/\1/b,bib/'''
 
-	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags '.s:ctagslangdefs.' --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=latex,bibtex --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags '.ctagslangdefs.' --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=latex,bibtex --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 "Add some custom 'smart alignment' to C/C++ files:
 augroup SmartAlignment
 	autocmd!
-	autocmd Filetype * setlocal cinoptions& cinkeys&
-	autocmd Filetype c,cpp setlocal cinoptions=+1,(1,u1,U1,k0 cinkeys-=0#
+	autocmd Filetype * setlocal cinoptions< cinkeys<
+	autocmd Filetype c,cpp setlocal cinoptions+=+1,(1,u1,U1,k0 cinkeys-=0#
 augroup END
