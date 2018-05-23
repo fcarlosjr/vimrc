@@ -189,12 +189,18 @@ set splitbelow
 "Sets the minimum number of lines above or below the cursor:
 set scrolloff=2
 
-"Disables the fold column in diff mode:
-set diffopt+=foldcolumn:0
-
 "Enable folding with all folds open on buffer start:
 set foldenable
 set foldlevelstart=99
+
+"Disables the fold column in diff mode:
+set diffopt+=foldcolumn:0
+
+"Set a sane colorscheme in diff mode:
+highlight! link DiffDelete Normal
+highlight! link DiffAdd Visual
+highlight! link DiffChange Visual
+highlight! link DiffText Todo
 
 "--------------------------
 "Global variables settings:
