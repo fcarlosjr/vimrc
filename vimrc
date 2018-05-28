@@ -467,7 +467,7 @@ augroup END
 function s:SetCppPath()
 	silent let cppver=substitute(system('g++ -dumpversion'),'\n\+$','','')
 	silent let cpptarget=substitute(system('g++ -dumpmachine'),'\n\+$','','')
-	execute 'setlocal path+=/usr/include/c++/'.cppver.',/usr/include/c++/'.cppver.'/bits,/usr/include/c++/'.cppver.'/ext,/usr/include/'.cpptarget.'/c++/'.cppver.'/bits,/usr/include/'.cpptarget.'/c++/'.cppver.'/ext,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include-fixed'
+	execute 'setlocal path+=/usr/include/c++/'.cppver.',/usr/include/c++/'.cppver.'/bits,/usr/include/c++/'.cppver.'/ext,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include-fixed'
 endfunction
 
 function s:SetPythonPath()
@@ -480,7 +480,7 @@ function s:SetMatlabPath()
 endfunction
 
 function s:SetLatexPath()
-	setlocal path+=/usr/share/texlive/texmf-dist/tex/latex/**,/usr/share/texlive/texmf-dist/bibtex/**,/usr/share/texlive/texmf-dist/makeindex/**
+	setlocal path+=/usr/share/texmf-dist/tex/latex/**,/usr/share/texmf-dist/bibtex/**,/usr/share/texmf-dist/makeindex/**
 endfunction
 
 "Add filetype-specific library tags to the tags path:
