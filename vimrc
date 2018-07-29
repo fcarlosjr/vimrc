@@ -81,7 +81,7 @@ set statusline+=%-7.(%c%V%)\    "current column and virtual column numbers
 set statusline+=%P              "percentage through file
 
 "Removes the annoying dashes from the vertical split separators:
-set fillchars=fold:-,vert:\ 
+set fillchars=vert:\ ,fold:-
 
 "Sets the terminal title to the active filename:
 set title
@@ -233,12 +233,12 @@ let g:netrw_list_hide=netrw_gitignore#Hide()   "Ignores .gitignore'd files
 let g:netrw_list_hide.=',\(^\|\s\s\)\zs\.\S\+' "Ignores dotfiles
 
 "--------------------
-"Custom key bindings:
+"Custom key mappings:
 "--------------------
 "Map custom commands for quicker buffer switching:
-nnoremap <leader>b :buffers<CR>:b 
-nnoremap <leader>sb :buffers<CR>:sb 
-nnoremap <leader>vb :buffers<CR>:vert sb 
+nnoremap <leader>b :buffers<CR>:b<space>
+nnoremap <leader>sb :buffers<CR>:sb<space>
+nnoremap <leader>vb :buffers<CR>:vert<space>sb<space>
 
 "Maps custom command to disable highlighting:
 nnoremap <silent> <ESC><ESC> :nohlsearch<CR>
@@ -306,8 +306,8 @@ augroup END
 "Change the status line color in insert mode:
 augroup StatusColor
 	autocmd!
-	autocmd InsertEnter * highlight! link StatusLine ErrorMsg | setlocal timeoutlen=0
-	autocmd InsertLeave * highlight! link StatusLine NONE | setlocal timeoutlen<
+	autocmd InsertEnter * highlight! link StatusLine ErrorMsg | set timeoutlen=0
+	autocmd InsertLeave * highlight! link StatusLine NONE | set timeoutlen&
 augroup END
 
 "Close the preview window at the end of omni completion:
