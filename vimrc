@@ -465,13 +465,12 @@ augroup SmartPath
 augroup END
 
 function s:SetCppPath()
-	silent let cppver=substitute(system('g++ -dumpversion'),'\n\+$','','')
-	silent let cpptarget=substitute(system('g++ -dumpmachine'),'\n\+$','','')
-	execute 'setlocal path+=/usr/include/c++/'.cppver.',/usr/include/c++/'.cppver.'/bits,/usr/include/c++/'.cppver.'/ext,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include,/usr/lib/gcc/'.cpptarget.'/'.cppver.'/include-fixed'
+	silent let cppdir=substitute(system('g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS="/**,"} gsub(/^[ \t]/,"") {print $0}'''),',\+$','','')
+	execute 'setlocal path+='.cppdir
 endfunction
 
 function s:SetPythonPath()
-	silent let pydir=substitute(system('python3 -c "import os, sys; print('',''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','','')
+	silent let pydir=substitute(system('python3 -c "import os, sys; print(''/**,''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','/**','')
 	execute 'setlocal path+='.pydir
 endfunction
 
@@ -514,7 +513,7 @@ function s:DeleteTagsCommand()
 endfunction
 
 function s:MakeCppTags()
-	command -buffer Makebasetags silent execute '!(CPPVER=$(g++ -dumpversion) && CPPTARGET=$(g++ -dumpmachine) && ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --excmd=number -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" /usr/include/c++/$CPPVER/* /usr/include/c++/$CPPVER/bits/* /usr/include/c++/$CPPVER/ext/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include/* /usr/lib/gcc/$CPPTARGET/$CPPVER/include-fixed/* && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+	command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --excmd=number --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" $(g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS=" "} gsub(/^[ \t]/,"") {print $0}'') && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
 	command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
