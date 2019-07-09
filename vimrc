@@ -29,6 +29,17 @@ set backspace=indent,eol,start
 set noerrorbells
 set visualbell t_vb=
 
+"Enable the mouse in all modes with right-click popup menu support:
+set mouse=a
+set mousemodel=popup_setpos
+
+"Customize the right-click popup menu:
+nnoremenu 1.10 PopUp.&Paste "+gP
+vnoremenu 1.10 PopUp.Cu&t "+x<C-\><C-G>
+vnoremenu 1.20 PopUp.&Copy "+y<C-\><C-G>
+vmenu <script> 1.30 PopUp.&Paste "-c<Esc>:call paste#Paste()<CR><C-\><C-G>
+sunmenu PopUp
+
 "Enables filetype detection and type-specific plugins and indentation files:
 filetype plugin indent on
 
@@ -132,7 +143,7 @@ set history=1000
 set confirm
 
 "Lists all tab-completion matching files above the command menu:
-set wildmode=list:longest
+set wildmode=list:longest,full
 
 "Set file patterns to be ignored on file-related tasks:
 set wildignore=*~,*.swp,*.bak,*.tmp,*/tmp/**
@@ -224,7 +235,10 @@ let g:sh_fold_enabled=7
 "Tweaks vim files (enables folding of augroups and functions):
 let g:vimsyn_folding='af'
 
-"Tweak the Netrw file finder:
+"Tweaks the Termdebug plugin (makes it open in vertical split):
+let g:termdebug_wide = 1
+
+"Tweak the Netrw plugin:
 let g:netrw_banner=0                           "Disables annoying banner
 let g:netrw_altv=1                             "Opens splits to the right
 let g:netrw_alto=1                             "Opens splits to the bottom
@@ -240,8 +254,11 @@ nnoremap <leader>b :buffers<CR>:b<space>
 nnoremap <leader>sb :buffers<CR>:sb<space>
 nnoremap <leader>vb :buffers<CR>:vert<space>sb<space>
 
-"Maps custom command to disable highlighting:
-nnoremap <silent> <ESC><ESC> :nohlsearch<CR>
+"Makes the 'clear' command also remove search highlights:
+nnoremap <C-L> :nohlsearch<CR><C-L>
+
+"Makes the 'interrupt' command also trigger the InsertLeave autocommand:
+inoremap <C-C> <ESC><C-C>
 
 "Maps custom command for entering paste mode:
 set pastetoggle=<F2>
@@ -249,12 +266,18 @@ set pastetoggle=<F2>
 "--------------
 "Auto commands:
 "--------------
-"Load some plugins for certain filetypes:
+"Load plugins for certain filetypes:
 augroup SmartPlugin
 	autocmd!
 	let s:loadplugins=&loadplugins
-	autocmd Filetype c,cpp if s:loadplugins | packadd termdebug | endif
+	autocmd Filetype c,cpp if s:loadplugins | call s:LoadTermdebug() | endif
 augroup END
+
+function s:LoadTermdebug()
+	packadd termdebug
+	highlight! link debugPC Visual
+	highlight! link debugBreakpoint StatusLineTerm
+endfunction
 
 "Overwrite filetype-specific format options:
 augroup FormatOptionsOverwrite
