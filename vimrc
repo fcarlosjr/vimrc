@@ -145,15 +145,16 @@ set confirm
 set wildmode=list:longest,full
 
 "Set file patterns to be ignored on file-related tasks:
-set wildignore=*~,*.swp,*.bak,*.tmp,*/tmp/**
-set wildignore+=*.log,*.aux,*.blg,*.idx
-set wildignore+=*.spl,*.jar,*.deb,*.bin
-set wildignore+=*.a,*.la,*.so,*.o,*.out,*.class,*.pyc,*.rbc
-set wildignore+=*zip,*.rar,*.tar.gz,*.tar.bz2,*.tar.xz,*.7z
-set wildignore+=*.xpm,*.eps,*.jpg,*.jpeg,*.ico,*.png,*.bmp,*.gif
-set wildignore+=*.avi,*.m4a,*.mp3,*.oga,*.ogg,*.wav,*.webm
-set wildignore+=*.ps,*.pdf,*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx
-set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp
+set wildignore=*~,*.swp,*.bak,*.tags,*.tmp,*/tmp/**
+set wildignore+=*.log,*.aux,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
+set wildignore+=*.spl,*.jar,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img
+set wildignore+=*.a,*.la,*.so,*.o,*.out,*.lib,*.dll,*.exe,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
+set wildignore+=*.zip,*.rar,*.bz2,*.gz,*.lz,*.rz,*.sz,*.xz,*.z,*.Z,*.7z,*.cab
+set wildignore+=*.xpm,*.eps,*.jpg,*.jpeg,*.ico,*.png,*.bmp,*.gif,*.tif,*.tiff
+set wildignore+=*.avi,*.mp4,*.mkv,*.flv,*.m4a,*.mp3,*.oga,*.ogg,*.wav,*.flac,*.webm
+set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
+set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
+set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
 "Make tab completion of files and directories case-insensitive:
 set nofileignorecase
@@ -248,18 +249,17 @@ let g:netrw_list_hide.=',\(^\|\s\s\)\zs\.\S\+' "Ignores dotfiles
 "--------------------
 "Custom key mappings:
 "--------------------
-"Map custom commands for quicker buffer switching:
-nnoremap <leader>b :buffers<CR>:b<space>
-nnoremap <leader>sb :buffers<CR>:sb<space>
-nnoremap <leader>vb :buffers<CR>:vert<space>sb<space>
-
 "Makes the 'clear' command also remove search highlights:
 nnoremap <C-L> :nohlsearch<CR><C-L>
 
 "Makes the 'interrupt' command also trigger the InsertLeave autocommand:
 inoremap <C-C> <ESC><C-C>
 
-"Maps custom command for entering paste mode:
+"Map function keys for quicker buffer switching:
+nnoremap <silent> <F3> :bprevious<CR>
+nnoremap <silent> <F4> :bnext<CR>
+
+"Maps a function key for entering paste mode:
 set pastetoggle=<F2>
 
 "--------------
