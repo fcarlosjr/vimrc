@@ -34,10 +34,10 @@ set mouse=a
 set mousemodel=popup_setpos
 
 "Customize the right-click popup menu:
-nnoremenu 1.10 PopUp.&Paste "+gP
-vnoremenu 1.10 PopUp.Cu&t "+x<C-\><C-G>
-vnoremenu 1.20 PopUp.&Copy "+y<C-\><C-G>
-vmenu <script> 1.30 PopUp.&Paste "-c<Esc>:call paste#Paste()<CR><C-\><C-G>
+nnoremenu 1.10 PopUp.&Paste gP
+vnoremenu 1.10 PopUp.Cu&t x<C-\><C-G>
+vnoremenu 1.20 PopUp.&Copy y<C-\><C-G>
+vnoremenu 1.30 PopUp.&Paste "_c<Esc>gp<C-\><C-G>
 sunmenu PopUp
 
 "Enables filetype detection and type-specific plugins and indentation files:
@@ -379,8 +379,10 @@ function s:SetCppCompiler()
     setlocal errorformat+=%.%#/ld:\ %m
     setlocal errorformat+=ld:\ %m
     setlocal errorformat+=%o:\(%*[^\)]\):\ %m
-    setlocal errorformat+=%D%*\\a[%*\\d]:\ Entering\ directory\ '%f'
-    setlocal errorformat+=%X%*\\a[%*\\d]:\ Leaving\ directory\ '%f'
+    setlocal errorformat+=%D%*\\a[%*\\d]:\ Entering\ directory\ %*[`']%f'
+    setlocal errorformat+=%X%*\\a[%*\\d]:\ Leaving\ directory\ %*[`']%f'
+    setlocal errorformat+=%D%*\\a:\ Entering\ directory\ %*[`']%f'
+    setlocal errorformat+=%X%*\\a:\ Leaving\ directory\ %*[`']%f'
     setlocal errorformat+=%-G%.%#
 endfunction
 
@@ -441,9 +443,13 @@ augroup SmartQuickFix
 augroup END
 
 function s:UniquifyQuickfix()
-    let filtpattern='^\a\+\[\d\+\]: Entering\|Leaving directory ''.\+'''
-    let sortedlist=filter(getqflist(),"v:val['text'] !~# filtpattern")
-    let sortedlist=sort(sortedlist,'s:SortQuickfix')
+    let filteredlist = getqflist()
+    let filtpatterns=['^\a\+\[\d\+\]: \(Entering\|Leaving\) directory \(`\|''\).\+''','^\a\+: \(Entering\|Leaving\) directory \(`\|''\).\+''']
+    for entry in filtpatterns
+        let filteredlist=filter(filteredlist,"v:val['text'] !~# entry")
+    endfor
+
+    let sortedlist=sort(filteredlist,'s:SortQuickfix')
 
     let uniquedlist=[]
     let last=[]
@@ -458,7 +464,7 @@ function s:UniquifyQuickfix()
         endif
     endfor
 
-    call setqflist(uniquedlist)
+    call setqflist(uniquedlist,'r')
     redraw
 endfunction
 
