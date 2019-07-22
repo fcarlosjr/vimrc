@@ -146,9 +146,10 @@ set wildmode=list:longest,full
 
 "Set file patterns to be ignored on file-related tasks:
 set wildignore=*~,*.swp,*.bak,*.tags,*.tmp,*/tmp/**
-set wildignore+=*.log,*.aux,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
-set wildignore+=*.spl,*.jar,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img
-set wildignore+=*.a,*.la,*.so,*.o,*.out,*.lib,*.dll,*.exe,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
+set wildignore+=*.aux,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
+set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.dll,*.exe
+set wildignore+=*.jar,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
+set wildignore+=*.spl,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img
 set wildignore+=*.zip,*.rar,*.bz2,*.gz,*.lz,*.rz,*.sz,*.xz,*.z,*.Z,*.7z,*.cab
 set wildignore+=*.xpm,*.eps,*.jpg,*.jpeg,*.ico,*.png,*.bmp,*.gif,*.tif,*.tiff
 set wildignore+=*.avi,*.mp4,*.mkv,*.flv,*.m4a,*.mp3,*.oga,*.ogg,*.wav,*.flac,*.webm
@@ -292,7 +293,8 @@ augroup END
 augroup SmartSuffixes
     autocmd!
     autocmd Filetype * setlocal suffixesadd<
-    autocmd Filetype c,cpp setlocal suffixesadd+=.c,.cpp,.h,.hpp
+    autocmd Filetype c,cpp setlocal suffixesadd+=.c,.cc,.cpp,.cxx,.h,.hh,.hpp,.hxx
+    autocmd Filetype python setlocal suffixesadd+=.py
     autocmd Filetype sh setlocal suffixesadd+=.sh
     autocmd Filetype tex setlocal suffixesadd+=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
 augroup END
@@ -444,7 +446,7 @@ augroup END
 
 function s:UniquifyQuickfix()
     let filteredlist = getqflist()
-    let filtpatterns=['^\a\+\[\d\+\]: \(Entering\|Leaving\) directory \(`\|''\).\+''','^\a\+: \(Entering\|Leaving\) directory \(`\|''\).\+''']
+    let filtpatterns=['^\a\+\(\[\d\+\]\|\): \(Entering\|Leaving\) directory \(`\|''\).\+''']
     for entry in filtpatterns
         let filteredlist=filter(filteredlist,"v:val['text'] !~# entry")
     endfor
