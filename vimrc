@@ -266,6 +266,11 @@ set pastetoggle=<F2>
 "--------------
 "Auto commands:
 "--------------
+"WinEnter: enter a window different from the previous one, regardless of whether to the same buffer, to a different open buffer or to a different new buffer.
+"BufEnter: enter a buffer different from the previous one, regardless of whether in the same window, in a different open window or in a different new window.
+"BufWinEnter: enter a buffer different from the previous one, in the same window or in a different new window.
+"When more than one event apply, the order of ocurrence is: WinEnter->BufEnter->BufWinEnter.
+
 "Load plugins for certain filetypes:
 augroup SmartPlugin
     autocmd!
@@ -283,6 +288,13 @@ function s:LoadTermdebug()
     highlight! link debugBreakpoint StatusLineTerm
 endfunction
 
+"Unlist certain buftypes:
+augroup SmartBufUnlist
+    autocmd!
+    autocmd BufWinEnter * if &l:buftype ==# 'quickfix' | setlocal nobuflisted | endif
+    autocmd TerminalOpen,BufWinEnter * if &l:buftype ==# 'terminal' | setlocal nobuflisted | if bufexists('gdb communication') | call setbufvar('gdb communication','&buflisted',0) | endif | endif
+augroup END
+
 "Overwrite filetype-specific format options:
 augroup FormatOptionsOverwrite
     autocmd!
@@ -293,7 +305,7 @@ augroup END
 augroup SmartSuffixes
     autocmd!
     autocmd Filetype * setlocal suffixesadd<
-    autocmd Filetype c,cpp setlocal suffixesadd+=.c,.cc,.cpp,.cxx,.h,.hh,.hpp,.hxx
+    autocmd Filetype c,cpp setlocal suffixesadd+=.c,.cc,.cpp,.cxx,.ipp,.tcc,.inl,.h,.hh,.hpp,.hxx
     autocmd Filetype python setlocal suffixesadd+=.py
     autocmd Filetype sh setlocal suffixesadd+=.sh
     autocmd Filetype tex setlocal suffixesadd+=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
@@ -487,6 +499,14 @@ function s:SortQuickfix(entry1, entry2)
         return 0
     endif
 endfunction
+
+"Create filetype-specific custom commands for launching interpreters:
+augroup SmartInterpreterCommand
+    autocmd!
+    autocmd Filetype * if exists(':Python') | delcommand Python | endif | if exists(':Matlab') | delcommand Matlab | endif
+    autocmd Filetype python command -buffer Python execute 'vertical terminal ++close python'
+    autocmd Filetype matlab command -buffer Matlab execute 'vertical terminal ++close matlab -nodesktop -nosplash'
+augroup END
 
 "Add filetype-specific library directories to the search path:
 augroup SmartPath
