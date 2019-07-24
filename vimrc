@@ -375,6 +375,13 @@ function s:UpdateFolding()
     endif
 endfunction
 
+"Set filetype-specific patterns for searching macro definitions:
+augroup SmartMacro
+    autocmd!
+    autocmd Filetype * setlocal define<
+    autocmd Filetype cpp setlocal define=^\\(#\\s*define\\\|[a-z]*\\s*const\\s*[a-z]*\\)
+augroup END
+
 "Set filetype-specific compiler options:
 augroup SmartCompiler
     autocmd!
@@ -468,8 +475,8 @@ function s:UniquifyQuickfix()
     let uniquedlist=[]
     let last=[]
     for entry in sortedlist
-        let this=[entry.bufnr,entry.lnum,entry.col,entry.module,entry.text]
-        if this[0:2] !=# last[0:2]
+        let this=[entry.bufnr,entry.lnum,entry.col,entry.text,entry.module]
+        if this[0:3] !=# last[0:3]
             call add(uniquedlist,entry)
             let last=this
         elseif this[0:2] == [0,0,0] && this[3:4] !=# last[3:4]
