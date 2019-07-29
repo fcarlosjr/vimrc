@@ -152,7 +152,7 @@ highlight! link Search IncSearch
 set ignorecase
 set smartcase
 
-"Enables recursive search path:
+"Enables recursive path on file searching:
 set path=./**,**
 
 "Set file patterns to be ignored on file searching:
@@ -168,13 +168,6 @@ set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
 set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
 set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
-"Lists all tab completion matching files above the command menu:
-set wildmode=list:longest,full
-
-"Make tab completion of files and directories case-insensitive:
-set nofileignorecase
-set wildignorecase
-
 "Indexes tag files from the current file folder up to the home folder:
 set tags=./.tags;$HOME
 
@@ -183,6 +176,13 @@ set tagrelative
 
 "Makes tag searching case-sensitive:
 set tagcase=match
+
+"Lists all tab completion matching files above the command menu:
+set wildmode=list:longest,full
+
+"Make tab completion of files and directories case-insensitive:
+set nofileignorecase
+set wildignorecase
 
 "Adds longest matching to autocompletion:
 set completeopt+=longest
@@ -479,7 +479,7 @@ function s:UniquifyQuickfix()
         if this[0:4] !=# last[0:4]
             call add(uniquedlist,entry)
             let last=this
-        elseif this[4] !=# 'w' && this[4] !=# 'e' && this[5] !=# last[5]
+        elseif this[0:2] == [0,0,0] && this[5] !=# last[5]
             call add(uniquedlist,entry)
             let last=this
         endif
