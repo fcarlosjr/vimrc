@@ -141,10 +141,21 @@ set history=1000
 "Asks for confirmation when closing with unsaved changes:
 set confirm
 
-"Lists all tab-completion matching files above the command menu:
-set wildmode=list:longest,full
+"Highlight matching characters as they are entered in a search:
+set hlsearch
+set incsearch
 
-"Set file patterns to be ignored on file-related tasks:
+"Highlights searches with the same colorscheme:
+highlight! link Search IncSearch
+
+"Make pattern searching case-sensitive only if there is any capital letter in the pattern:
+set ignorecase
+set smartcase
+
+"Enables recursive search path:
+set path=./**,**
+
+"Set file patterns to be ignored on file searching:
 set wildignore=*~,*.swp,*.bak,*.tags,*.tmp,*/tmp/**
 set wildignore+=*.aux,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
 set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.dll,*.exe
@@ -157,14 +168,14 @@ set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
 set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
 set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
+"Lists all tab completion matching files above the command menu:
+set wildmode=list:longest,full
+
 "Make tab completion of files and directories case-insensitive:
 set nofileignorecase
 set wildignorecase
 
-"Enables recursive tab-completion for all file-related tasks:
-set path=./**,**
-
-"Searches for tag files from the current file directory up to the home folder:
+"Indexes tag files from the current file folder up to the home folder:
 set tags=./.tags;$HOME
 
 "Makes paths inside a tag file relative to the tag file's directory:
@@ -173,26 +184,15 @@ set tagrelative
 "Makes tag searching case-sensitive:
 set tagcase=match
 
+"Adds longest matching to autocompletion:
+set completeopt+=longest
+
 "Set custom directories for backup, undo, swap and viminfo files:
 set nobackup writebackup noundofile swapfile
 set backupdir=$HOME/.vim/backup//
 set undodir=$HOME/.vim/undo//
 set directory=$HOME/.vim/swap//
 set viminfo+=n$HOME/.vim/viminfo
-
-"Adds longest matching to autocompletion:
-set completeopt+=longest
-
-"Highlight matching characters as they are entered in a search:
-set hlsearch
-set incsearch
-
-"Highlights searches with the same colorscheme:
-highlight! link Search IncSearch
-
-"Make pattern searching case-sensitive only if there is any capital letter in the pattern:
-set ignorecase
-set smartcase
 
 "Open split panes to right and bottom:
 set splitright
@@ -301,7 +301,7 @@ augroup FormatOptionsOverwrite
     autocmd Filetype * setlocal formatoptions<
 augroup END
 
-"Add filetype-specific suffixes to extend file searches using commands like 'gf':
+"Add filetype-specific suffixes to extend file searching using commands like 'gf':
 augroup SmartSuffixes
     autocmd!
     autocmd Filetype * setlocal suffixesadd<
@@ -394,16 +394,16 @@ augroup SmartCompiler
 augroup END
 
 function s:SetCppCompiler()
-    setlocal errorformat=%f:%l:%c:\ fatal\ %trror:\ %m
-    setlocal errorformat+=%f:%l:%c:\ %trror:\ %m
-    setlocal errorformat+=%f:%l:%c:\ %tarning:\ %m
+    setlocal errorformat^=%f:%l:\ fatal\ %trror:\ %m
+    setlocal errorformat^=%f:%l:%c:\ fatal\ %trror:\ %m
+    setlocal errorformat^=%-G%f:%l:\ %tote:\ %m
+    setlocal errorformat^=%-G%f:%l:%c:\ %tote:\ %m
+    setlocal errorformat^=%-G%f:%l:%*[\ ]required\ from\ %.%#
+    setlocal errorformat^=%-G%f:%l:%c:%*[\ ]required\ from\ %.%#
+    setlocal errorformat-=%-G%.%#
     setlocal errorformat+=%.%#/ld:\ %m
     setlocal errorformat+=ld:\ %m
     setlocal errorformat+=%o:\(%*[^\)]\):\ %m
-    setlocal errorformat+=%D%*\\a[%*\\d]:\ Entering\ directory\ %*[`']%f'
-    setlocal errorformat+=%X%*\\a[%*\\d]:\ Leaving\ directory\ %*[`']%f'
-    setlocal errorformat+=%D%*\\a:\ Entering\ directory\ %*[`']%f'
-    setlocal errorformat+=%X%*\\a:\ Leaving\ directory\ %*[`']%f'
     setlocal errorformat+=%-G%.%#
 endfunction
 
@@ -465,7 +465,7 @@ augroup END
 
 function s:UniquifyQuickfix()
     let filteredlist = getqflist()
-    let filtpatterns=['^\a\+\(\[\d\+\]\|\): \(Entering\|Leaving\) directory \(`\|''\).\+''']
+    let filtpatterns=['^\a\+\(\[\d\+\]\|\): \(Entering\|Leaving\) directory \(`\|''\).\+''','^Making \a\+ in .\+']
     for entry in filtpatterns
         let filteredlist=filter(filteredlist,"v:val['text'] !~# entry")
     endfor
@@ -475,17 +475,19 @@ function s:UniquifyQuickfix()
     let uniquedlist=[]
     let last=[]
     for entry in sortedlist
-        let this=[entry.bufnr,entry.lnum,entry.col,entry.text,entry.module]
-        if this[0:3] !=# last[0:3]
+        let this=[entry.bufnr,entry.lnum,entry.col,entry.module,entry.type,entry.text]
+        if this[0:4] !=# last[0:4]
             call add(uniquedlist,entry)
             let last=this
-        elseif this[0:2] == [0,0,0] && this[3:4] !=# last[3:4]
+        elseif this[4] !=# 'w' && this[4] !=# 'e' && this[5] !=# last[5]
             call add(uniquedlist,entry)
             let last=this
         endif
     endfor
 
+    let qftitle=getqflist({'title':1})
     call setqflist(uniquedlist,'r')
+    call setqflist([],'r',qftitle)
     redraw
 endfunction
 
@@ -574,21 +576,21 @@ function s:DeleteTagsCommand()
 endfunction
 
 function s:MakeCppTags()
-    command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --excmd=number --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" $(g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS=" "} gsub(/^[ \t]/,"") {print $0}'') && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.ipp.tcc. --excmd=number --recurse=yes -I $HOME/.vim/tags/cppignore $(g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS=" "} gsub(/^[ \t]/,"") {print $0}'') && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.tcc. --recurse=yes -I "_GLIBCXX_BEGIN_NAMESPACE_VERSION _GLIBCXX_END_NAMESPACE_VERSION _GLIBCXX_VISIBILITY+" '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --sort=foldcase --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.ipp.tcc. --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 function s:MakePythonTags()
-    command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --sort=foldcase --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 function s:MakeMatlabTags()
-    command -buffer Makebasetags silent execute '!(ctags -f $HOME/.vim/tags/octave.tags~ --languages=matlab --excmd=number --recurse=yes /usr/share/octave && rm -f $HOME/.vim/tags/octave.tags && mv $HOME/.vim/tags/octave.tags~ $HOME/.vim/tags/octave.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/octave.tags~ --languages=matlab --excmd=number --recurse=yes /usr/share/octave && rm -f $HOME/.vim/tags/octave.tags && mv $HOME/.vim/tags/octave.tags~ $HOME/.vim/tags/octave.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --regex-matlab=''/^[ \t]*([a-zA-Z0-9_.]+)[ \t]*=/\1/v,variable/'' --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=matlab --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --sort=foldcase --regex-matlab=''/^[ \t]*([a-zA-Z0-9_.]+)[ \t]*=/\1/v,variable/'' --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=matlab --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
 endfunction
 
 function s:MakeLatexTags()
