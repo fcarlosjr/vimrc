@@ -152,12 +152,15 @@ highlight! link Search IncSearch
 set ignorecase
 set smartcase
 
-"Enables recursive path on file searching:
-set path=./**,**
+"Automatically changes the current working directory to that of the current file:
+set autochdir
+
+"Enables recursive file searching in the directory vim was called from:
+set path=$PWD/**
 
 "Set file patterns to be ignored on file searching:
-set wildignore=*~,*.swp,*.bak,*.tags,*.tmp,*/tmp/**
-set wildignore+=*.aux,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
+set wildignore=*~,*.swp,*.bak,*.orig,*.old,*.tags,*.tmp,*/tmp/**
+set wildignore+=*.log,*.aux,*.dep,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
 set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.dll,*.exe
 set wildignore+=*.jar,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
 set wildignore+=*.spl,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img
@@ -168,10 +171,10 @@ set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
 set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
 set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
-"Indexes tag files from the current file folder up to the home folder:
-set tags=./.tags;$HOME
+"Indexes tag files from the current working directory up to the directory vim was called from:
+set tags=.tags;$PWD
 
-"Makes paths inside a tag file relative to the tag file's directory:
+"Interprets paths inside a tag file as relative to the tag file's directory:
 set tagrelative
 
 "Makes tag searching case-sensitive:
@@ -241,6 +244,7 @@ let g:termdebug_wide = 1
 
 "Tweak the Netrw plugin:
 let g:netrw_banner=0                           "Disables annoying banner
+let g:netrw_keepdir=0                          "Changes :lcd with browsing
 let g:netrw_altv=1                             "Opens splits to the right
 let g:netrw_alto=1                             "Opens splits to the bottom
 let g:netrw_liststyle=3                        "Makes tree view the default
@@ -257,11 +261,8 @@ nnoremap <C-L> :nohlsearch<CR><C-L>
 inoremap <C-C> <ESC><C-C>
 
 "Map function keys for quicker buffer switching:
-nnoremap <silent> <F3> :bprevious<CR>
-nnoremap <silent> <F4> :bnext<CR>
-
-"Maps a function key for entering paste mode:
-set pastetoggle=<F2>
+nnoremap <silent> <F2> :bprevious<CR>
+nnoremap <silent> <F3> :bnext<CR>
 
 "--------------
 "Auto commands:
@@ -280,10 +281,10 @@ augroup END
 
 function s:LoadTermdebug()
     packadd termdebug
-    nnoremap <expr> <buffer> <F5> bufexists('!gdb') ? TermDebugSendCommand('step') : ''
-    nnoremap <expr> <buffer> <F6> bufexists('!gdb') ? TermDebugSendCommand('next') : ''
-    nnoremap <expr> <buffer> <F7> bufexists('!gdb') ? TermDebugSendCommand('finish') : ''
-    nnoremap <expr> <buffer> <F8> bufexists('!gdb') ? TermDebugSendCommand('continue') : ''
+    nnoremap <buffer> <expr> <F5> bufexists('!gdb') ? TermDebugSendCommand('step') : ''
+    nnoremap <buffer> <expr> <F6> bufexists('!gdb') ? TermDebugSendCommand('next') : ''
+    nnoremap <buffer> <expr> <F7> bufexists('!gdb') ? TermDebugSendCommand('finish') : ''
+    nnoremap <buffer> <expr> <F8> bufexists('!gdb') ? TermDebugSendCommand('continue') : ''
     highlight! link debugPC Visual
     highlight! link debugBreakpoint StatusLineTerm
 endfunction
@@ -311,15 +312,63 @@ augroup SmartSuffixes
     autocmd Filetype tex setlocal suffixesadd+=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
 augroup END
 
+"Add filetype-specific patterns to be ignored on file searching:
+augroup SmartWildignore
+    autocmd!
+    autocmd Filetype * set wildignore-=*.d
+    autocmd Filetype c,cpp set wildignore+=*.d
+augroup END
+
+"Map a function key to switch between filetype-specific source and header files:
+augroup SmartSourceHeaderToggle
+    autocmd!
+    autocmd Filetype * if maparg('<F4>','n') != '' | execute 'nunmap <buffer> <F4>' | endif
+    autocmd Filetype c,cpp nnoremap <buffer> <script> <silent> <F4> :call <SID>SourceHeaderToggle(expand('%:e'))<CR>
+augroup END
+
+function s:SourceHeaderToggle(keySuffix)
+    let sourceHeaderMap = {'c'   : ['h'],
+                         \ 'cc'  : ['hh'],
+                         \ 'cpp' : ['hpp','h'],
+                         \ 'cxx' : ['hxx'],
+                         \ 'ipp' : ['h'],
+                         \ 'tcc' : ['h'],
+                         \ 'inl' : ['h'],
+                         \ 'h'   : ['c','cpp','ipp','tcc','inl'],
+                         \ 'hh'  : ['cc'],
+                         \ 'hpp' : ['cpp'],
+                         \ 'hxx' : ['cxx']}
+
+    "First, search in the directory of the current file:
+    for mappedSuffix in get(sourceHeaderMap,a:keySuffix,[])
+        let mappedFile = findfile(expand('%:t:r').'.'.mappedSuffix,'.')
+        if mappedFile != ''
+            execute 'edit '.mappedFile
+            return
+        end
+    endfor
+
+    "Then, search in path:
+    for mappedSuffix in get(sourceHeaderMap,a:keySuffix,[])
+        let mappedFile = findfile(expand('%:t:r').'.'.mappedSuffix)
+        if mappedFile != ''
+            execute 'edit '.mappedFile
+            return
+        end
+    endfor
+
+    echo 'No source/header found'
+endfunction
+
 "Create filetype-specific custom commands for extracting code documentation:
-augroup SmartDoc
+augroup SmartDocCommand
     autocmd!
     autocmd Filetype * if exists(':Makedoc') | delcommand Makedoc | endif
     autocmd Filetype c,cpp command -buffer -complete=dir -nargs=1 Makedoc if filewritable(<q-args>)==2 | call s:MakeDoc('cpp', '\/\/\/', <q-args>) | else | echoerr 'Not a valid or writable directory' | endif
 augroup END
 
 function s:MakeDoc(nested_syntax, comment_pattern, dir_path)
-    silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
+    silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
 endfunction
 
 "Adjust the case of a suggested word to that of the typed text on autocompletion for certain filetypes:
@@ -576,21 +625,21 @@ function s:DeleteTagsCommand()
 endfunction
 
 function s:MakeCppTags()
-    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.ipp.tcc. --excmd=number --recurse=yes -I $HOME/.vim/tags/cppignore $(g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS=" "} gsub(/^[ \t]/,"") {print $0}'') && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+qf --langmap=c++:+.ipp.tcc. --excmd=number --recurse=yes -I $HOME/.vim/tags/cppignore $(g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS=" "} gsub(/^[ \t]/,"") {print $0}'') && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --sort=foldcase --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+q --langmap=c++:+.ipp.tcc. --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase --tag-relative=yes -f ''{}''/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+qf --langmap=c++:+.ipp.tcc. --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
 endfunction
 
 function s:MakePythonTags()
-    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --sort=foldcase --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase --tag-relative=yes -f ''{}''/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
 endfunction
 
 function s:MakeMatlabTags()
-    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/octave.tags~ --languages=matlab --excmd=number --recurse=yes /usr/share/octave && rm -f $HOME/.vim/tags/octave.tags && mv $HOME/.vim/tags/octave.tags~ $HOME/.vim/tags/octave.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/octave.tags~ --languages=matlab --excmd=number --recurse=yes /usr/share/octave && rm -f $HOME/.vim/tags/octave.tags && mv $HOME/.vim/tags/octave.tags~ $HOME/.vim/tags/octave.tags) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags --sort=foldcase --regex-matlab=''/^[ \t]*([a-zA-Z0-9_.]+)[ \t]*=/\1/v,variable/'' --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=matlab --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase --regex-matlab=''/^[ \t]*([a-zA-Z0-9_.]+)[ \t]*=/\1/v,variable/'' --tag-relative=yes -f ''{}''/.tags~ --languages=matlab --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
 endfunction
 
 function s:MakeLatexTags()
@@ -603,5 +652,11 @@ function s:MakeLatexTags()
         \ --langmap=bibtex:.bib
         \ --regex-bibtex=''/^@[A-Za-z]+\{([^,]*)/\1/b,bib/'''
 
-    command -buffer -complete=dir -nargs=1 Maketags if filewritable(<q-args>)==2 | silent execute '!(ctags '.ctagslangdefs.' --tag-relative=yes -f '.<q-args>.'/.tags~ --languages=latex,bibtex --recurse=yes '.<q-args>.'/ && rm -f '.<q-args>.'/.tags && mv '.<q-args>.'/.tags~ '.<q-args>.'/.tags) &>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background' | else | echoerr 'Not a valid or writable directory' | endif
+    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase '.ctagslangdefs.' --tag-relative=yes -f ''{}''/.tags~ --languages=latex,bibtex --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
 endfunction
+
+"On exit, remove all tags in the directory tree vim was called from:
+augroup SmartTagsCleanup
+    autocmd!
+    autocmd VimLeavePre * silent execute '!find '.$PWD.' \( -name .tags -or -name .tags~ \) -delete &>>$HOME/.vim/log.txt &'
+augroup END
