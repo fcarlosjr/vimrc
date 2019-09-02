@@ -63,7 +63,7 @@ set softtabstop=4
 "Sets custom symbols for hidden characters when 'list' option is set:
 set listchars=tab:··,trail:·
 
-"Configure english and brazilian portuguese spell checking and autocompletion:
+"Configure english and brazilian portuguese spell checking and insert mode completion:
 set spelllang=en,pt_br
 set spellfile=$HOME/.vim/spell/en.utf-8.add,$HOME/.vim/spell/pt.utf-8.add
 set complete+=kspell
@@ -159,7 +159,7 @@ set autochdir
 set path=$PWD/**
 
 "Set file patterns to be ignored on file searching:
-set wildignore=*~,*.swp,*.bak,*.orig,*.old,*.tags,*.tmp,*/tmp/**
+set wildignore=*~,*.swp,*.bak,*.orig,*.old,*.tmp,*/tmp/**
 set wildignore+=*.log,*.aux,*.dep,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
 set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.dll,*.exe
 set wildignore+=*.jar,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
@@ -171,15 +171,6 @@ set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
 set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
 set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
-"Indexes tag files from the current working directory up to the directory vim was called from:
-set tags=.tags;$PWD
-
-"Interprets paths inside a tag file as relative to the tag file's directory:
-set tagrelative
-
-"Makes tag searching case-sensitive:
-set tagcase=match
-
 "Lists all tab completion matching files above the command menu:
 set wildmode=list:longest,full
 
@@ -187,8 +178,13 @@ set wildmode=list:longest,full
 set nofileignorecase
 set wildignorecase
 
-"Adds longest matching to autocompletion:
-set completeopt+=longest
+"Adds popup menu and longest matching to insert mode completion:
+set completeopt-=preview
+set completeopt+=popup,longest
+set completepopup=height:10,width:60
+
+"Sets preview popups in place of preview windows:
+set previewpopup=height:10,width:60
 
 "Set custom directories for backup, undo, swap and viminfo files:
 set nobackup writebackup noundofile swapfile
@@ -272,23 +268,6 @@ nnoremap <silent> <F3> :bnext<CR>
 "BufWinEnter: enter a buffer different from the previous one, in the same window or in a different new window.
 "When more than one event apply, the order of ocurrence is: WinEnter->BufEnter->BufWinEnter.
 
-"Load plugins for certain filetypes:
-augroup SmartPlugin
-    autocmd!
-    let s:loadplugins=&loadplugins
-    autocmd Filetype c,cpp if s:loadplugins | call s:LoadTermdebug() | endif
-augroup END
-
-function s:LoadTermdebug()
-    packadd termdebug
-    nnoremap <buffer> <expr> <F5> bufexists('!gdb') ? TermDebugSendCommand('step') : ''
-    nnoremap <buffer> <expr> <F6> bufexists('!gdb') ? TermDebugSendCommand('next') : ''
-    nnoremap <buffer> <expr> <F7> bufexists('!gdb') ? TermDebugSendCommand('finish') : ''
-    nnoremap <buffer> <expr> <F8> bufexists('!gdb') ? TermDebugSendCommand('continue') : ''
-    highlight! link debugPC Visual
-    highlight! link debugBreakpoint StatusLineTerm
-endfunction
-
 "Unlist certain buftypes:
 augroup SmartBufUnlist
     autocmd!
@@ -300,6 +279,15 @@ augroup END
 augroup FormatOptionsOverwrite
     autocmd!
     autocmd Filetype * setlocal formatoptions<
+augroup END
+
+"Add filetype-specific characters to be recognized as keywords:
+augroup SmartKeyword
+    autocmd!
+    autocmd Filetype * setlocal iskeyword<
+    autocmd Filetype help if &l:buftype ==# 'help' | setlocal iskeyword=!-~,^*,^\|,^\",192-255 | endif
+    autocmd Filetype matlab setlocal iskeyword+=.
+    autocmd Filetype tex setlocal iskeyword+=-,:
 augroup END
 
 "Add filetype-specific suffixes to extend file searching using commands like 'gf':
@@ -315,8 +303,8 @@ augroup END
 "Add filetype-specific patterns to be ignored on file searching:
 augroup SmartWildignore
     autocmd!
-    autocmd Filetype * set wildignore-=*.d
-    autocmd Filetype c,cpp set wildignore+=*.d
+    let s:dignore = ['c', 'cpp']
+    autocmd BufEnter * if index(s:dignore, &l:filetype) >= 0 | set wildignore+=*.d | else | set wildignore-=*.d | endif
 augroup END
 
 "Map a function key to switch between filetype-specific source and header files:
@@ -371,21 +359,6 @@ function s:MakeDoc(nested_syntax, comment_pattern, dir_path)
     silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
 endfunction
 
-"Adjust the case of a suggested word to that of the typed text on autocompletion for certain filetypes:
-augroup SmartInferCase
-    autocmd!
-    autocmd Filetype * setlocal infercase<
-    autocmd Filetype text,plaintex,context,tex,asciidoc,rst,markdown,gitcommit,mail setlocal infercase
-augroup END
-
-"Set spell checking for certain filetypes:
-augroup SmartSpell
-    autocmd!
-    autocmd Filetype * setlocal spell<
-    autocmd Filetype help if &l:buftype ==# 'help' | setlocal nospell | endif
-    autocmd Filetype text,plaintex,context,tex,asciidoc,rst,markdown,gitcommit,mail setlocal spell
-augroup END
-
 "Restore the last cursor position when opening a buffer:
 augroup CursorPosition
     autocmd!
@@ -397,12 +370,6 @@ augroup StatusColor
     autocmd!
     autocmd InsertEnter * highlight! link StatusLine ErrorMsg | set timeoutlen=0
     autocmd InsertLeave * highlight! link StatusLine NONE | set timeoutlen&
-augroup END
-
-"Close the preview window at the end of omni completion:
-augroup ClosePreview
-    autocmd!
-    autocmd CompleteDone * pclose
 augroup END
 
 "Update filetype-specific automatic folding on certain events:
@@ -424,25 +391,23 @@ function s:UpdateFolding()
     endif
 endfunction
 
-"Set filetype-specific patterns for searching macro definitions:
-augroup SmartMacro
-    autocmd!
-    autocmd Filetype * setlocal define<
-    autocmd Filetype cpp setlocal define=^\\(#\\s*define\\\|[a-z]*\\s*const\\s*[a-z]*\\)
-augroup END
-
 "Set filetype-specific compiler options:
 augroup SmartCompiler
     autocmd!
-    autocmd Filetype * setlocal errorformat< makeprg<
-    autocmd Filetype c,cpp compiler gcc | call s:SetCppCompiler()
+    autocmd Filetype * call s:ResetCompiler()
+    autocmd Filetype c,cpp compiler gcc | call s:ConfigCppCompiler()
     autocmd Filetype python compiler pyunit
     autocmd Filetype context let b:tex_flavor='context' | compiler tex
     autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex
-    autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:SetTexCompiler()
+    autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:ConfigTexCompiler()
 augroup END
 
-function s:SetCppCompiler()
+function s:ResetCompiler()
+    setlocal errorformat<
+    setlocal makeprg<
+endfunction
+
+function s:ConfigCppCompiler()
     setlocal errorformat^=%f:%l:\ fatal\ %trror:\ %m
     setlocal errorformat^=%f:%l:%c:\ fatal\ %trror:\ %m
     setlocal errorformat^=%-G%f:%l:\ %tote:\ %m
@@ -456,7 +421,7 @@ function s:SetCppCompiler()
     setlocal errorformat+=%-G%.%#
 endfunction
 
-function s:SetTexCompiler()
+function s:ConfigTexCompiler()
     "Push file to file stack:
     setlocal errorformat=%-P**%f
     setlocal errorformat+=%-P**\"%f\"
@@ -566,15 +531,26 @@ augroup SmartInterpreterCommand
     autocmd Filetype matlab command -buffer Matlab execute 'vertical terminal ++close matlab -nodesktop -nosplash'
 augroup END
 
+"Set filetype-specific patterns for searching macro definitions:
+augroup SmartMacro
+    autocmd!
+    autocmd Filetype * setlocal define<
+    autocmd Filetype cpp setlocal define=^\\(#\\s*define\\\|[a-z]*\\s*const\\s*[a-z]*\\)
+augroup END
+
 "Add filetype-specific library directories to the search path:
 augroup SmartPath
     autocmd!
-    autocmd Filetype * setlocal path<
+    autocmd Filetype * call s:ResetPath()
     autocmd Filetype c,cpp call s:SetCppPath()
     autocmd Filetype python call s:SetPythonPath()
     autocmd Filetype matlab call s:SetMatlabPath()
     autocmd Filetype tex call s:SetLatexPath()
 augroup END
+
+function s:ResetPath()
+    setlocal path<
+endfunction
 
 function s:SetCppPath()
     silent let cppdir=substitute(system('g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS="/**,"} gsub(/^[ \t]/,"") {print $0}'''),',\+$','','')
@@ -594,69 +570,70 @@ function s:SetLatexPath()
     setlocal path+=/usr/share/texmf-dist/tex/latex/**,/usr/share/texmf-dist/bibtex/**,/usr/share/texmf-dist/makeindex/**
 endfunction
 
-"Add filetype-specific library tags to the tags path:
-augroup SmartTagsPath
+"Load the Termdebug plugin for certain filetypes:
+augroup SmartTermdebug
     autocmd!
-    autocmd Filetype * setlocal tags<
-    autocmd Filetype c,cpp setlocal tags+=$HOME/.vim/tags/cpp.tags
-    autocmd Filetype python setlocal tags+=$HOME/.vim/tags/python3.tags
-    autocmd Filetype matlab setlocal tags+=$HOME/.vim/tags/octave.tags
+    let s:loadplugins = &loadplugins
+    autocmd Filetype * if s:loadplugins && executable('gdb') | call s:UnloadTermdebug() | endif
+    autocmd Filetype c,cpp if s:loadplugins && executable('gdb') | call s:LoadTermdebug() | endif
 augroup END
 
-"Create filetype-specific custom commands for generating tags:
-augroup SmartTagsCommand
+function s:UnloadTermdebug()
+    if maparg('<F5>','n') != '' | execute 'nunmap <buffer> <F5>' | endif
+    if maparg('<F6>','n') != '' | execute 'nunmap <buffer> <F6>' | endif
+    if maparg('<F7>','n') != '' | execute 'nunmap <buffer> <F7>' | endif
+    if maparg('<F8>','n') != '' | execute 'nunmap <buffer> <F8>' | endif
+endfunction
+
+function s:LoadTermdebug()
+    packadd termdebug
+    nnoremap <buffer> <expr> <F5> bufexists('!gdb') ? TermDebugSendCommand('step') : ''
+    nnoremap <buffer> <expr> <F6> bufexists('!gdb') ? TermDebugSendCommand('next') : ''
+    nnoremap <buffer> <expr> <F7> bufexists('!gdb') ? TermDebugSendCommand('finish') : ''
+    nnoremap <buffer> <expr> <F8> bufexists('!gdb') ? TermDebugSendCommand('continue') : ''
+    highlight! link debugPC Visual
+    highlight! link debugBreakpoint StatusLineTerm
+endfunction
+
+"Load the LSP plugin for certain filetypes:
+augroup SmartLSP
     autocmd!
-    autocmd Filetype * setlocal iskeyword< | call s:DeleteTagsCommand()
-    autocmd Filetype help if &l:buftype ==# 'help' | setlocal iskeyword=!-~,^*,^\|,^\",192-255 | endif
-    autocmd Filetype c,cpp call s:MakeCppTags()
-    autocmd Filetype python call s:MakePythonTags()
-    autocmd Filetype matlab setlocal iskeyword+=. | call s:MakeMatlabTags()
-    autocmd Filetype tex setlocal iskeyword+=-,: | call s:MakeLatexTags()
+    let s:loadplugins = &loadplugins
+    autocmd Filetype * if s:loadplugins | call s:UnloadLSP() | endif
+    autocmd Filetype c,cpp if s:loadplugins && executable('clangd') | call s:LoadLSP() | call s:RegisterClangd() | endif
 augroup END
 
-function s:DeleteTagsCommand()
-    if exists(':Makebasetags')
-        delcommand Makebasetags
+function s:UnloadLSP()
+    if exists('g:lsp_loaded')
+        call lsp#disable()
     endif
 
-    if exists(':Maketags')
-        delcommand Maketags
-    endif
+    if maparg('gd','n') != '' | execute 'nunmap <buffer> gd' | endif
+    if maparg('gD','n') != '' | execute 'nunmap <buffer> gD' | endif
+
+    setlocal omnifunc<
 endfunction
 
-function s:MakeCppTags()
-    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/cpp.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+qf --langmap=c++:+.ipp.tcc. --excmd=number --recurse=yes -I $HOME/.vim/tags/cppignore $(g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS=" "} gsub(/^[ \t]/,"") {print $0}'') && rm -f $HOME/.vim/tags/cpp.tags && mv $HOME/.vim/tags/cpp.tags~ $HOME/.vim/tags/cpp.tags) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+function s:LoadLSP()
+    packadd async
+    packadd vim-lsp
+    execute 'helptags $HOME/.vim/pack/prabirshrestha/opt/vim-lsp/doc/'
 
-    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase --tag-relative=yes -f ''{}''/.tags~ --languages=c,c++ --c-kinds=+pl --c++-kinds=+pl --fields=+iaSmKz --extras=+qf --langmap=c++:+.ipp.tcc. --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
+    let g:lsp_highlight_references_enabled = 0
+    let g:lsp_diagnostics_enabled = 0
+
+    nmap <buffer> gd <plug>(lsp-hover)
+    nmap <buffer> gD <plug>(lsp-definition)
+
+    setlocal omnifunc=lsp#complete
 endfunction
 
-function s:MakePythonTags()
-    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/python3.tags~ --languages=python --python-kinds=-i --fields=+l --excmd=number --recurse=yes $(python3 -c "import os, sys; print('' ''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))") && rm -f $HOME/.vim/tags/python3.tags && mv $HOME/.vim/tags/python3.tags~ $HOME/.vim/tags/python3.tags) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
+function s:RegisterClangd()
+    call lsp#register_server({
+        \ 'name': 'clangd',
+        \ 'cmd': {server_info->['clangd', '-background-index']},
+        \ 'whitelist': ['c', 'cpp', 'objc', 'objcpp'],
+        \ })
 
-    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase --tag-relative=yes -f ''{}''/.tags~ --languages=python --python-kinds=-i --fields=+l --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
+    call lsp#enable()
 endfunction
-
-function s:MakeMatlabTags()
-    command -buffer Makebasetags silent execute '!(ctags --sort=foldcase -f $HOME/.vim/tags/octave.tags~ --languages=matlab --excmd=number --recurse=yes /usr/share/octave && rm -f $HOME/.vim/tags/octave.tags && mv $HOME/.vim/tags/octave.tags~ $HOME/.vim/tags/octave.tags) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makebasetags started in background'
-
-    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase --regex-matlab=''/^[ \t]*([a-zA-Z0-9_.]+)[ \t]*=/\1/v,variable/'' --tag-relative=yes -f ''{}''/.tags~ --languages=matlab --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
-endfunction
-
-function s:MakeLatexTags()
-    let ctagslangdefs='
-        \ --langdef=latex
-        \ --langmap=latex:.tex
-        \ --regex-latex=''/\\label[ \t]*\*?\{[ \t]*([^}]*)\}/\1/l,label/''
-        \ --regex-latex=''/\\bibitem[ \t]*(\[[^]]*\])?\{([^}]*)\}/\2/m,bibitem/''
-        \ --langdef=bibtex
-        \ --langmap=bibtex:.bib
-        \ --regex-bibtex=''/^@[A-Za-z]+\{([^,]*)/\1/b,bib/'''
-
-    command -buffer Maketags silent execute '!(find '.$PWD.' -maxdepth 4 -not -path "*/.*" -type d -execdir bash -c "ctags --sort=foldcase '.ctagslangdefs.' --tag-relative=yes -f ''{}''/.tags~ --languages=latex,bibtex --recurse=yes ''{}''/ && rm -f ''{}''/.tags && mv ''{}''/.tags~ ''{}''/.tags" ";") &>>$HOME/.vim/log.txt &' | redraw! | echo 'Maketags started in background'
-endfunction
-
-"On exit, remove all tags in the directory tree vim was called from:
-augroup SmartTagsCleanup
-    autocmd!
-    autocmd VimLeavePre * silent execute '!find '.$PWD.' \( -name .tags -or -name .tags~ \) -delete &>>$HOME/.vim/log.txt &'
-augroup END
