@@ -414,6 +414,7 @@ function s:ConfigCppCompiler()
     setlocal errorformat^=%-G%f:%l:%c:\ %tote:\ %m
     setlocal errorformat^=%-G%f:%l:%*[\ ]required\ from\ %.%#
     setlocal errorformat^=%-G%f:%l:%c:%*[\ ]required\ from\ %.%#
+    setlocal errorformat^=%-G%f:%l:%*[\ ]recipe\ for\ target\ %.%#
     setlocal errorformat-=%-G%.%#
     setlocal errorformat+=%.%#/ld:\ %m
     setlocal errorformat+=ld:\ %m
@@ -558,7 +559,7 @@ function s:SetCppPath()
 endfunction
 
 function s:SetPythonPath()
-    silent let pydir=substitute(system('python3 -c "import os, sys; print(''/**,''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','/**','')
+    silent let pydir=substitute(system('python -c "import os, sys; print(''/**,''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','/**','')
     execute 'setlocal path+='.pydir
 endfunction
 
@@ -621,9 +622,10 @@ function s:LoadLSP()
 
     let g:lsp_highlight_references_enabled = 0
     let g:lsp_diagnostics_enabled = 0
+    let g:lsp_fold_enabled = 0
 
-    nmap <buffer> gd <plug>(lsp-hover)
-    nmap <buffer> gD <plug>(lsp-definition)
+    nmap <buffer> gd <plug>(lsp-definition)
+    nmap <buffer> gD <plug>(lsp-references)
 
     setlocal omnifunc=lsp#complete
 endfunction
