@@ -161,7 +161,7 @@ set path=$PWD/**
 "Set file patterns to be ignored on file searching:
 set wildignore=*~,*.swp,*.bak,*.orig,*.old,*.tmp,*/tmp/**
 set wildignore+=*.log,*.aux,*.dep,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
-set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.dll,*.exe
+set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.map,*.elf,*.dll,*.exe
 set wildignore+=*.jar,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
 set wildignore+=*.spl,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img
 set wildignore+=*.zip,*.rar,*.bz2,*.gz,*.lz,*.rz,*.sz,*.xz,*.z,*.Z,*.7z,*.cab
@@ -609,14 +609,13 @@ function s:UnloadLSP()
         call lsp#disable()
     endif
 
-    if maparg('gd','n') != '' | execute 'nunmap <buffer> gd' | endif
-    if maparg('gD','n') != '' | execute 'nunmap <buffer> gD' | endif
+    if maparg('gS','n') != '' | execute 'nunmap <buffer> gS' | endif
 
     setlocal omnifunc<
+    setlocal tagfunc<
 endfunction
 
 function s:LoadLSP()
-    packadd async
     packadd vim-lsp
     execute 'helptags $HOME/.vim/pack/prabirshrestha/opt/vim-lsp/doc/'
 
@@ -624,17 +623,17 @@ function s:LoadLSP()
     let g:lsp_diagnostics_enabled = 0
     let g:lsp_fold_enabled = 0
 
-    nmap <buffer> gd <plug>(lsp-definition)
-    nmap <buffer> gD <plug>(lsp-references)
+    nmap <buffer> gS <plug>(lsp-references)
 
     setlocal omnifunc=lsp#complete
+    setlocal tagfunc=lsp#tagfunc
 endfunction
 
 function s:RegisterClangd()
     call lsp#register_server({
         \ 'name': 'clangd',
         \ 'cmd': {server_info->['clangd', '-background-index']},
-        \ 'whitelist': ['c', 'cpp', 'objc', 'objcpp'],
+        \ 'allowlist': ['c', 'cpp', 'objc', 'objcpp'],
         \ })
 
     call lsp#enable()
