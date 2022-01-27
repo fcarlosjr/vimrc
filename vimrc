@@ -619,7 +619,7 @@ function s:LoadLSP()
     packadd vim-lsp
     execute 'helptags $HOME/.vim/pack/prabirshrestha/opt/vim-lsp/doc/'
 
-    let g:lsp_highlight_references_enabled = 0
+    let g:lsp_document_highlight_enabled = 0
     let g:lsp_diagnostics_enabled = 0
     let g:lsp_fold_enabled = 0
 
