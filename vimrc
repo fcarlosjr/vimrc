@@ -40,6 +40,10 @@ vnoremenu 1.20 PopUp.&Copy y<C-\><C-G>
 vnoremenu 1.30 PopUp.&Paste "_c<Esc>gp<C-\><C-G>
 sunmenu PopUp
 
+"Load global plugins:
+packadd! cfilter
+packadd! matchit
+
 "Enables filetype detection and type-specific plugins and indentation files:
 filetype plugin indent on
 
@@ -397,6 +401,7 @@ augroup SmartCompiler
     autocmd Filetype * call s:ResetCompiler()
     autocmd Filetype c,cpp compiler gcc | call s:ConfigCppCompiler()
     autocmd Filetype python compiler pyunit
+    autocmd Filetype plantuml call s:ConfigUmlCompiler()
     autocmd Filetype context let b:tex_flavor='context' | compiler tex
     autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex
     autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:ConfigTexCompiler()
@@ -420,6 +425,10 @@ function s:ConfigCppCompiler()
     setlocal errorformat+=ld:\ %m
     setlocal errorformat+=%o:\(%*[^\)]\):\ %m
     setlocal errorformat+=%-G%.%#
+endfunction
+
+function s:ConfigUmlCompiler()
+    execute 'setlocal makeprg=plantuml\ -charset\ UTF-8\ -noerror\ -tsvg\ '.expand('%:t')
 endfunction
 
 function s:ConfigTexCompiler()
