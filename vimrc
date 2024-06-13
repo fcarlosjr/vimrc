@@ -1,8 +1,9 @@
 "-----------------
 "General settings:
 "-----------------
-"Disables Vi compatibility:
-set nocompatible
+"Load the Vim default settings
+unlet! skip_defaults_vim
+source $VIMRUNTIME/defaults.vim
 
 "Ensures fast terminal connection:
 set ttyfast
@@ -22,10 +23,8 @@ set fileformats=unix,dos,mac
 "Enables UTF-8 encoding:
 set encoding=utf-8
 
-"Enables backspacing over everything in insert mode:
-set backspace=indent,eol,start
-
 "Completely disable flash or beep bells:
+set belloff=all
 set noerrorbells
 set visualbell t_vb=
 
@@ -43,9 +42,6 @@ sunmenu PopUp
 "Load global plugins:
 packadd! cfilter
 packadd! matchit
-
-"Enables filetype detection and type-specific plugins and indentation files:
-filetype plugin indent on
 
 "Disable built-in smart indentation in favor of the type-specific indentation:
 set nosmartindent
@@ -72,9 +68,6 @@ set spelllang=en,pt_br
 set spellfile=$HOME/.vim/spell/en.utf-8.add,$HOME/.vim/spell/pt.utf-8.add
 set complete+=kspell
 
-"Enables syntax highlighting:
-syntax enable
-
 "Preserves the cursor column on commands like <C-D>, <C-U> and on buffer switching:
 set nostartofline
 
@@ -86,13 +79,14 @@ set virtualedit=block
 
 "Enable persistent status line and edit its content:
 set laststatus=2
-set statusline=                 "clear statusline
-set statusline+=%-6.([%n%M]%)\  "buffer number and modified flag
-set statusline+=%<%f\           "relative file path
-set statusline+=%=\             "right alignment marker
-set statusline+=%4.(%l,%)       "current line number
-set statusline+=%-7.(%c%V%)\    "current column and virtual column numbers
-set statusline+=%P              "percentage through file
+set statusline=                                                    "clear statusline
+set statusline+=%-6.([%n%M]%)\                                     "buffer number and modified flag
+set statusline+=%<%f\                                              "relative file path
+set statusline+=%=\                                                "right alignment marker
+set statusline+=%3.{mode()==#'i'?codeium#GetStatusString():'\ '}\  "codeium suggestions
+set statusline+=%6.(%l,%)                                          "current line number
+set statusline+=%-7.(%c%V%)\                                       "current column and virtual column numbers
+set statusline+=%P                                                 "percentage through file
 
 "Removes the annoying dashes from the vertical split separators:
 set fillchars=vert:\ ,fold:-
@@ -109,6 +103,7 @@ set showmode
 set noshowcmd
 
 "Makes Vim show as much as possible of the last line on the screen:
+set display-=truncate
 set display+=lastline
 
 "Wrap lines on some special characters, rather than on the last fitting character:
@@ -159,28 +154,32 @@ set smartcase
 "Automatically changes the current working directory to that of the current file:
 set autochdir
 
-"Enables recursive file searching in the directory vim was called from:
+"Enables recursive file searching in the directory Vim was called from:
 set path=$PWD/**
 
 "Set file patterns to be ignored on file searching:
-set wildignore=*~,*.swp,*.bak,*.orig,*.old,*.tmp,*/tmp/**
-set wildignore+=*.log,*.aux,*.dep,*.blg,*.idx,*.dmp,*.dump,*.extra,*.gcda,*.gcno
+set wildignore=*~,*.swp,*.bak,*.bkp,*.orig,*.old,*.tmp,*/tmp/**
+set wildignore+=*.aux,*.dep,*.blg,*.idx,*.extra,*.gcda,*.gcno,*.gcov
 set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.map,*.elf,*.dll,*.exe
-set wildignore+=*.jar,*.class,*.pyc,*.pyo,*.pyd,*.mat,*.fig
-set wildignore+=*.spl,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img
-set wildignore+=*.zip,*.rar,*.bz2,*.gz,*.lz,*.rz,*.sz,*.xz,*.z,*.Z,*.7z,*.cab
-set wildignore+=*.xpm,*.eps,*.jpg,*.jpeg,*.ico,*.png,*.bmp,*.gif,*.tif,*.tiff
+set wildignore+=*.jar,*.class,*.war,*.pyc,*.pyo,*.pyd,*.mat,*.fig,*.tat,*.pcap,*.drawio
+set wildignore+=*.spl,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img,*.AppImage,*.db*,*.sqlite*
+set wildignore+=*.zip,*.rar,*.bz2,*.tbz,*.gz,*.tgz,*.lz,*.rz,*.sz,*.xz,*.z,*.Z,*.7z,*.cab
+set wildignore+=*.xpm,*.eps,*.jpg,*.jpeg,*.ico,*.png,*.svg,*.bmp,*.gif,*.tif,*.tiff
 set wildignore+=*.avi,*.mp4,*.mkv,*.flv,*.m4a,*.mp3,*.oga,*.ogg,*.wav,*.flac,*.webm
 set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
 set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
 set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
-"Lists all tab completion matching files above the command menu:
+"List all tab completion matching files above the command menu:
+set nowildmenu
 set wildmode=list:longest,full
 
 "Make tab completion of files and directories case-insensitive:
 set nofileignorecase
 set wildignorecase
+
+"Disables scanning of included files in insert mode completion:
+set complete-=i
 
 "Adds popup menu and longest matching to insert mode completion:
 set completeopt-=preview
@@ -201,8 +200,10 @@ set viminfo+=n$HOME/.vim/viminfo
 set splitright
 set splitbelow
 
-"Sets the minimum number of lines above or below the cursor:
+"Set the minimum number of visible lines and columns around the cursor:
 set scrolloff=2
+set sidescroll=1
+set sidescrolloff=2
 
 "Enable folding with all folds open on buffer start:
 set foldenable
@@ -243,26 +244,40 @@ let g:vimsyn_folding='af'
 let g:termdebug_wide = 1
 
 "Tweak the Netrw plugin:
-let g:netrw_banner=0                           "Disables annoying banner
-let g:netrw_keepdir=0                          "Changes :lcd with browsing
-let g:netrw_altv=1                             "Opens splits to the right
-let g:netrw_alto=1                             "Opens splits to the bottom
-let g:netrw_liststyle=3                        "Makes tree view the default
-let g:netrw_list_hide=netrw_gitignore#Hide()   "Ignores .gitignore'd files
-let g:netrw_list_hide.=',\(^\|\s\s\)\zs\.\S\+' "Ignores dotfiles
+let g:netrw_banner=0                                                                           "Disables annoying banner
+let g:netrw_keepdir=0                                                                          "Changes :lcd with browsing
+let g:netrw_altv=1                                                                             "Opens splits to the right
+let g:netrw_alto=1                                                                             "Opens splits to the bottom
+let g:netrw_liststyle=3                                                                        "Makes tree view the default
 
-"--------------------
-"Custom key mappings:
-"--------------------
-"Makes the 'clear' command also remove search highlights:
-nnoremap <C-L> :nohlsearch<CR><C-L>
+let s:escape='substitute(escape(v:val, ".$~"), "*", ".*", "g")'
+let g:netrw_list_hide=join(map(split(&wildignore, ','), '"^".' . s:escape . '. "/\\=$"'), ',') "Ignores wildignore'd patterns
+let g:netrw_list_hide.=',^\.\.\=/\=$'                                                          "Ignores the pattern '..='
+let g:netrw_list_hide.=',\(^\|\s\s\)\zs\.\S\+'                                                 "Ignores dotfiles
+
+"Tweak the Codeium plugin:
+let g:codeium_manual = v:true      "Disables auto suggestions
+let g:codeium_disable_bindings = 1 "Disables all custom key mappings
+
+"---------------------------------
+"Custom key mappings and commands:
+"---------------------------------
+"Makes the 'clear' command also remove search highlights and update diff mode:
+nnoremap <silent> <C-L> :nohlsearch<C-R>=has('diff')?'<Bar>diffupdate':''<CR><CR><C-L>
 
 "Makes the 'interrupt' command also trigger the InsertLeave autocommand:
 inoremap <C-C> <ESC><C-C>
 
 "Map function keys for quicker buffer switching:
-nnoremap <silent> <F2> :bprevious<CR>
-nnoremap <silent> <F3> :bnext<CR>
+nnoremap <silent> <F2> <Cmd>bprevious<CR>
+nnoremap <silent> <F3> <Cmd>bnext<CR>
+
+"Map tab keys to manually trigger and accept Codeium suggestions
+imap <S-Tab> <Cmd>call codeium#CycleOrComplete()<CR>
+imap <script><silent><nowait><expr> <Tab> codeium#Accept()
+
+"Creates a custom command for accessing the Codeium chat
+command! CodeiumChat :silent! call codeium#Chat()
 
 "--------------
 "Auto commands:
@@ -271,6 +286,13 @@ nnoremap <silent> <F3> :bnext<CR>
 "BufEnter: enter a buffer different from the previous one, regardless of whether in the same window, in a different open window or in a different new window.
 "BufWinEnter: enter a buffer different from the previous one, in the same window or in a different new window.
 "When more than one event apply, the order of ocurrence is: WinEnter->BufEnter->BufWinEnter.
+
+"Turn the F1 function key into a help toggle
+augroup SmartHelp
+    autocmd!
+    autocmd Filetype * if maparg('<F1>','n') != '' | execute 'nunmap <buffer> <F1>' | endif
+    autocmd Filetype help if &l:buftype ==# 'help' | nnoremap <buffer> <F1> <Cmd>helpclose<CR> | endif
+augroup END
 
 "Unlist certain buftypes:
 augroup SmartBufUnlist
@@ -315,7 +337,7 @@ augroup END
 augroup SmartSourceHeaderToggle
     autocmd!
     autocmd Filetype * if maparg('<F4>','n') != '' | execute 'nunmap <buffer> <F4>' | endif
-    autocmd Filetype c,cpp nnoremap <buffer> <script> <silent> <F4> :call <SID>SourceHeaderToggle(expand('%:e'))<CR>
+    autocmd Filetype c,cpp nnoremap <buffer> <script> <silent> <F4> <Cmd>call <SID>SourceHeaderToggle(expand('%:e'))<CR>
 augroup END
 
 function s:SourceHeaderToggle(keySuffix)
@@ -363,17 +385,11 @@ function s:MakeDoc(nested_syntax, comment_pattern, dir_path)
     silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
 endfunction
 
-"Restore the last cursor position when opening a buffer:
-augroup CursorPosition
-    autocmd!
-    autocmd BufWinEnter * if line('''"') <= line('$') | execute 'normal! g`"zz' | endif
-augroup END
-
 "Change the status line color in insert mode:
 augroup StatusColor
     autocmd!
-    autocmd InsertEnter * highlight! link StatusLine ErrorMsg | set timeoutlen=0
-    autocmd InsertLeave * highlight! link StatusLine NONE | set timeoutlen&
+    autocmd InsertEnter * highlight! link StatusLine ErrorMsg
+    autocmd InsertLeave * highlight! link StatusLine NONE
 augroup END
 
 "Update filetype-specific automatic folding on certain events:
@@ -628,6 +644,7 @@ function s:LoadLSP()
     packadd vim-lsp
     execute 'helptags $HOME/.vim/pack/prabirshrestha/opt/vim-lsp/doc/'
 
+    let g:lsp_use_native_client = 1
     let g:lsp_document_highlight_enabled = 0
     let g:lsp_diagnostics_enabled = 0
     let g:lsp_fold_enabled = 0
