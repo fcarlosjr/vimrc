@@ -1,7 +1,7 @@
 "-----------------
 "General settings:
 "-----------------
-"Load the Vim default settings
+"Load the Vim default settings:
 unlet! skip_defaults_vim
 source $VIMRUNTIME/defaults.vim
 
@@ -40,8 +40,11 @@ vnoremenu 1.30 PopUp.&Paste "_c<Esc>gp<C-\><C-G>
 sunmenu PopUp
 
 "Load global plugins:
+packadd! nohlsearch
 packadd! cfilter
 packadd! matchit
+packadd! comment
+packadd! hlyank
 
 "Disable built-in smart indentation in favor of the type-specific indentation:
 set nosmartindent
@@ -63,7 +66,7 @@ set softtabstop=4
 "Sets custom symbols for hidden characters when 'list' option is set:
 set listchars=tab:··,trail:·
 
-"Configure english and brazilian portuguese spell checking and insert mode completion:
+"Configure english and brazilian portuguese spell checking in insert mode completion:
 set spelllang=en,pt_br
 set spellfile=$HOME/.vim/spell/en.utf-8.add,$HOME/.vim/spell/pt.utf-8.add
 set complete+=kspell
@@ -79,14 +82,13 @@ set virtualedit=block
 
 "Enable persistent status line and edit its content:
 set laststatus=2
-set statusline=                                                    "clear statusline
-set statusline+=%-6.([%n%M]%)\                                     "buffer number and modified flag
-set statusline+=%<%f\                                              "relative file path
-set statusline+=%=\                                                "right alignment marker
-set statusline+=%3.{mode()==#'i'?codeium#GetStatusString():'\ '}\  "codeium suggestions
-set statusline+=%6.(%l,%)                                          "current line number
-set statusline+=%-7.(%c%V%)\                                       "current column and virtual column numbers
-set statusline+=%P                                                 "percentage through file
+set statusline=                 "clear statusline
+set statusline+=%-6.([%n%M]%)\  "buffer number and modified flag
+set statusline+=%<%f\           "relative file path
+set statusline+=%=\             "right alignment marker
+set statusline+=%6.(%l,%)       "current line number
+set statusline+=%-7.(%c%V%)\    "current column and virtual column numbers
+set statusline+=%P              "percentage through file
 
 "Removes the annoying dashes from the vertical split separators:
 set fillchars=vert:\ ,fold:-
@@ -140,6 +142,9 @@ set history=1000
 "Asks for confirmation when closing with unsaved changes:
 set confirm
 
+"Automatically reload the buffer on external file changes:
+set autoread
+
 "Highlight matching characters as they are entered in a search:
 set hlsearch
 set incsearch
@@ -151,43 +156,46 @@ highlight! link Search IncSearch
 set ignorecase
 set smartcase
 
-"Automatically changes the current working directory to that of the current file:
-set autochdir
-
-"Enables recursive file searching in the directory Vim was called from:
-set path=$PWD/**
+"Enables recursive file searching in the current working directory:
+set path=**
 
 "Set file patterns to be ignored on file searching:
-set wildignore=*~,*.swp,*.bak,*.bkp,*.orig,*.old,*.tmp,*/tmp/**
+set wildignore=**/.git/**,**/.hg/**,**/.svn/**,**/.cache/**,**/tmp/**
+set wildignore+=*~,tags,TAGS,*.swp,*.bak,*.bkp,*.orig,*.old,*.tmp
 set wildignore+=*.aux,*.dep,*.blg,*.idx,*.extra,*.gcda,*.gcno,*.gcov
-set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.out,*.lib,*.map,*.elf,*.dll,*.exe
+set wildignore+=*.a,*.sa,*.o,*.ko,*.so,*.so.*,*.out,*.lib,*.map,*.elf,*.dll,*.exe
 set wildignore+=*.jar,*.class,*.war,*.pyc,*.pyo,*.pyd,*.mat,*.fig,*.tat,*.pcap,*.drawio
 set wildignore+=*.spl,*.deb,*.rpm,*.pkg,*.bin,*.tar,*.iso,*.img,*.AppImage,*.db*,*.sqlite*
 set wildignore+=*.zip,*.rar,*.bz2,*.tbz,*.gz,*.tgz,*.lz,*.rz,*.sz,*.xz,*.z,*.Z,*.7z,*.cab
 set wildignore+=*.xpm,*.eps,*.jpg,*.jpeg,*.ico,*.png,*.svg,*.bmp,*.gif,*.tif,*.tiff
 set wildignore+=*.avi,*.mp4,*.mkv,*.flv,*.m4a,*.mp3,*.oga,*.ogg,*.wav,*.flac,*.webm
-set wildignore+=*.dvi,*.ps,*.pdf,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
+set wildignore+=*.dvi,*.ps,*.pdf,*.PDF,*.djv,*.djvu,*.eap,*.vpp,*.vdi,*.vbox
 set wildignore+=*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.rtf,*.rtfd
 set wildignore+=*.odt,*.fodt,*.ods,*.fods,*.odp,*.fodp,*.odg,*.fodg
 
-"List all tab completion matching files above the command menu:
-set nowildmenu
-set wildmode=list:longest,full
+"Add popup menu and fuzzy/longest matching to command-line mode completion:
+set wildmenu
+set wildoptions=pum,fuzzy
+set wildmode=longest:full,full
 
-"Make tab completion of files and directories case-insensitive:
+"Make completion of files and directories case-insensitive:
 set nofileignorecase
 set wildignorecase
 
 "Disables scanning of included files in insert mode completion:
 set complete-=i
 
-"Adds popup menu and longest matching to insert mode completion:
+"Add popup info and fuzzy/longest matching to insert mode completion:
 set completeopt-=preview
-set completeopt+=popup,longest
+set completeopt+=popup,fuzzy,longest
 set completepopup=height:10,width:60
 
-"Sets preview popups in place of preview windows:
+"Sets popup windows in place of preview windows:
 set previewpopup=height:10,width:60
+
+"Set size limits for popup menus:
+set pumheight=10
+set pummaxwidth=90
 
 "Set custom directories for backup, undo, swap and viminfo files:
 set nobackup writebackup noundofile swapfile
@@ -240,12 +248,14 @@ let g:sh_fold_enabled=7
 "Tweaks vim files (enables folding of augroups and functions):
 let g:vimsyn_folding='af'
 
+"Tweaks the Hlyank plugin (sets the highlight duration):
+let g:hlyank_duration = 100
+
 "Tweaks the Termdebug plugin (makes it open in vertical split):
 let g:termdebug_wide = 1
 
 "Tweak the Netrw plugin:
 let g:netrw_banner=0                                                                           "Disables annoying banner
-let g:netrw_keepdir=0                                                                          "Changes :lcd with browsing
 let g:netrw_altv=1                                                                             "Opens splits to the right
 let g:netrw_alto=1                                                                             "Opens splits to the bottom
 let g:netrw_liststyle=3                                                                        "Makes tree view the default
@@ -255,9 +265,9 @@ let g:netrw_list_hide=join(map(split(&wildignore, ','), '"^".' . s:escape . '. "
 let g:netrw_list_hide.=',^\.\.\=/\=$'                                                          "Ignores the pattern '..='
 let g:netrw_list_hide.=',\(^\|\s\s\)\zs\.\S\+'                                                 "Ignores dotfiles
 
-"Tweak the Codeium plugin:
-let g:codeium_manual = v:true      "Disables auto suggestions
-let g:codeium_disable_bindings = 1 "Disables all custom key mappings
+"Tweak the Copilot plugin:
+let g:copilot_enabled = 0      "Disables auto suggestions
+let g:copilot_no_maps = v:true "Disables all custom key mappings
 
 "---------------------------------
 "Custom key mappings and commands:
@@ -272,12 +282,70 @@ inoremap <C-C> <ESC><C-C>
 nnoremap <silent> <F2> <Cmd>bprevious<CR>
 nnoremap <silent> <F3> <Cmd>bnext<CR>
 
-"Map tab keys to manually trigger and accept Codeium suggestions
-imap <S-Tab> <Cmd>call codeium#CycleOrComplete()<CR>
-imap <script><silent><nowait><expr> <Tab> codeium#Accept()
+"Map tab keys to manually trigger and accept Copilot suggestions:
+function s:CopilotCycleSuggest()
+    if empty(copilot#GetDisplayedSuggestion().text)
+        call copilot#Suggest()
+    else
+        call copilot#Next()
+    endif
+    return ''
+endfunction
 
-"Creates a custom command for accessing the Codeium chat
-command! CodeiumChat :silent! call codeium#Chat()
+inoremap <silent><script><nowait><expr> <S-Tab> <SID>CopilotCycleSuggest()
+inoremap <silent><script><nowait><expr> <Tab> copilot#AcceptLine("\<Tab>")
+
+"Create a custom command for launching the Copilot CLI:
+if executable('copilot')
+    command -nargs=* CopilotCLI execute 'vertical terminal ++close copilot ' . <q-args>
+endif
+
+"Replaces the default 'bdelete' commands to prevent closing the last window:
+function s:BufferDelete(bang, args)
+    let arglist = empty(a:args) ? [''] : split(a:args)
+
+    for arg in arglist
+        let is_current_buffer = empty(arg) ||
+              \ (str2nr(arg) > 0 ? str2nr(arg) : bufnr(arg)) == bufnr('%')
+
+        if is_current_buffer
+            let normal_windows = filter(range(1, winnr('$')),
+                  \ {_, n -> getbufvar(winbufnr(n), '&buftype') ==# ''})
+
+            let are_all_windows_showing_current_buffer = len(normal_windows) > 0 &&
+                  \ len(filter(copy(normal_windows), {_, n -> winbufnr(n) == bufnr('%')})) == len(normal_windows)
+
+            if are_all_windows_showing_current_buffer
+                let listed_plus_current_buffers = filter(range(1, bufnr('$')),
+                      \ {_, b -> buflisted(b) && getbufvar(b, '&buftype') ==# '' || b == bufnr('%')})
+
+                if len(listed_plus_current_buffers) == 1
+                    execute 'enew'
+                else
+                    execute 'bnext'
+                endif
+
+                if buflisted(bufnr('#'))
+                    execute 'bdelete'.a:bang.' # | redraw'
+                endif
+
+            else
+                execute 'bdelete'.a:bang
+            endif
+
+        else
+            execute 'bdelete'.a:bang.' ' . arg
+        endif
+    endfor
+endfunction
+
+command -bang -nargs=* -complete=buffer Bdelete call s:BufferDelete(<q-bang>, <q-args>)
+cnoreabbrev <expr> bd (getcmdtype() == ':' && getcmdline() =~ '^\s*bd!*$') ? 'Bdelete' : 'bd'
+cnoreabbrev <expr> bde (getcmdtype() == ':' && getcmdline() =~ '^\s*bde!*$') ? 'Bdelete' : 'bde'
+cnoreabbrev <expr> bdel (getcmdtype() == ':' && getcmdline() =~ '^\s*bdel!*$') ? 'Bdelete' : 'bdel'
+cnoreabbrev <expr> bdele (getcmdtype() == ':' && getcmdline() =~ '^\s*bdele!*$') ? 'Bdelete' : 'bdele'
+cnoreabbrev <expr> bdelet (getcmdtype() == ':' && getcmdline() =~ '^\s*bdelet!*$') ? 'Bdelete' : 'bdelet'
+cnoreabbrev <expr> bdelete (getcmdtype() == ':' && getcmdline() =~ '^\s*bdelete!*$') ? 'Bdelete' : 'bdelete'
 
 "--------------
 "Auto commands:
@@ -287,18 +355,25 @@ command! CodeiumChat :silent! call codeium#Chat()
 "BufWinEnter: enter a buffer different from the previous one, in the same window or in a different new window.
 "When more than one event apply, the order of ocurrence is: WinEnter->BufEnter->BufWinEnter.
 
-"Turn the F1 function key into a help toggle
+"Turn the F1 function key into a help toggle:
 augroup SmartHelp
     autocmd!
     autocmd Filetype * if maparg('<F1>','n') != '' | execute 'nunmap <buffer> <F1>' | endif
     autocmd Filetype help if &l:buftype ==# 'help' | nnoremap <buffer> <F1> <Cmd>helpclose<CR> | endif
 augroup END
 
+"Automatically reload and notify a changed buffer on more events:
+augroup SmartBufferReload
+    autocmd!
+    autocmd FocusGained,BufEnter,CursorHold,CursorHoldI * if mode() !~ '\v(c|r.?|!|t)' && getcmdwintype() == '' | checktime | endif
+    autocmd FileChangedShellPost * redraw | echohl WarningMsg | echomsg "File changed on disk. Buffer reloaded." | echohl None
+augroup END
+
 "Unlist certain buftypes:
 augroup SmartBufUnlist
     autocmd!
     autocmd BufWinEnter * if &l:buftype ==# 'quickfix' | setlocal nobuflisted | endif
-    autocmd TerminalOpen,BufWinEnter * if &l:buftype ==# 'terminal' | setlocal nobuflisted | if bufexists('gdb communication') | call setbufvar('gdb communication','&buflisted',0) | endif | endif
+    autocmd TerminalOpen,BufWinEnter * if &l:buftype ==# 'terminal' | setlocal nobuflisted | if bufexists('gdb-communication') | call setbufvar('gdb-communication','&buflisted',0) | endif | endif
 augroup END
 
 "Overwrite filetype-specific format options:
@@ -316,6 +391,30 @@ augroup SmartKeyword
     autocmd Filetype tex setlocal iskeyword+=-,:
 augroup END
 
+"Set a cached fuzzy finder function for file searching:
+let s:files_cache = []
+
+augroup CachedFuzzyFind
+    autocmd!
+    autocmd CmdlineEnter * let s:files_cache = []
+augroup END
+
+function! FuzzyFindFunc(cmd_arg, cmd_complete)
+    if empty(s:files_cache)
+        let paths = join(map(split(&path, ','), {_, p -> p == '**' ? '.' : p}), ' ')
+        let ignores = empty(&wildignore) ? '' : '\! \( ' . join(map(split(&wildignore, ','), {_, p -> p =~ '/' ? '-path ' . shellescape(p) . ' -prune' : '-name ' . shellescape(p)}), ' -o ') . ' \)'
+        let s:files_cache = map(systemlist('find ' . paths . ' ' . ignores . ' -type f -follow -print 2>/dev/null'), {_, v -> substitute(v, '^\.\/', '', '')})
+    endif
+
+    if empty(a:cmd_arg)
+        return s:files_cache
+    else
+        return matchfuzzy(s:files_cache, a:cmd_arg)
+    endif
+endfunction
+
+set findfunc=FuzzyFindFunc
+
 "Add filetype-specific suffixes to extend file searching using commands like 'gf':
 augroup SmartSuffixes
     autocmd!
@@ -332,58 +431,6 @@ augroup SmartWildignore
     let s:dignore = ['c', 'cpp']
     autocmd BufEnter * if index(s:dignore, &l:filetype) >= 0 | set wildignore+=*.d | else | set wildignore-=*.d | endif
 augroup END
-
-"Map a function key to switch between filetype-specific source and header files:
-augroup SmartSourceHeaderToggle
-    autocmd!
-    autocmd Filetype * if maparg('<F4>','n') != '' | execute 'nunmap <buffer> <F4>' | endif
-    autocmd Filetype c,cpp nnoremap <buffer> <script> <silent> <F4> <Cmd>call <SID>SourceHeaderToggle(expand('%:e'))<CR>
-augroup END
-
-function s:SourceHeaderToggle(keySuffix)
-    let sourceHeaderMap = {'c'   : ['h'],
-                         \ 'cc'  : ['hh'],
-                         \ 'cpp' : ['hpp','h'],
-                         \ 'cxx' : ['hxx'],
-                         \ 'ipp' : ['h'],
-                         \ 'tcc' : ['h'],
-                         \ 'inl' : ['h'],
-                         \ 'h'   : ['c','cpp','ipp','tcc','inl'],
-                         \ 'hh'  : ['cc'],
-                         \ 'hpp' : ['cpp'],
-                         \ 'hxx' : ['cxx']}
-
-    "First, search in the directory of the current file:
-    for mappedSuffix in get(sourceHeaderMap,a:keySuffix,[])
-        let mappedFile = findfile(expand('%:t:r').'.'.mappedSuffix,'.')
-        if mappedFile != ''
-            execute 'edit '.mappedFile
-            return
-        end
-    endfor
-
-    "Then, search in path:
-    for mappedSuffix in get(sourceHeaderMap,a:keySuffix,[])
-        let mappedFile = findfile(expand('%:t:r').'.'.mappedSuffix)
-        if mappedFile != ''
-            execute 'edit '.mappedFile
-            return
-        end
-    endfor
-
-    echo 'No source/header found'
-endfunction
-
-"Create filetype-specific custom commands for extracting code documentation:
-augroup SmartDocCommand
-    autocmd!
-    autocmd Filetype * if exists(':Makedoc') | delcommand Makedoc | endif
-    autocmd Filetype c,cpp command -buffer -complete=dir -nargs=1 Makedoc if filewritable(<q-args>)==2 | call s:MakeDoc('cpp', '\/\/\/', <q-args>) | else | echoerr 'Not a valid or writable directory' | endif
-augroup END
-
-function s:MakeDoc(nested_syntax, comment_pattern, dir_path)
-    silent execute '!(awk ''BEGIN{newline=-1; printlock=0;} gsub(/^[ \t]*'.a:comment_pattern.'/,"") {if(printlock==2 && match($0,/^[ \t]*$/)) {print "```"$0} else if(printlock==2) {print "```\n\n"$0} else if(newline==1) {print "\n"$0} else {print $0}; if(match($0,/[ \t]*[:,]+[ \t]*$/)) {printlock=1} else {printlock=0}; newline=0; next;} printlock {if(\!match($0,/^[ \t]*$/)) {if(printlock==1) {print "\n```'.a:nested_syntax.'\n"$0; printlock=2} else if(newline==1) {print "\n"$0} else {print $0}; newline=0} else {newline=1}; next;} \!newline {newline=1;}'' '.expand('%').' > '.a:dir_path.'/'.expand('%:t').'.md) &>>$HOME/.vim/log.txt &' | redraw! | echo 'Makedoc started in background'
-endfunction
 
 "Change the status line color in insert mode:
 augroup StatusColor
@@ -630,37 +677,35 @@ augroup SmartLSP
 augroup END
 
 function s:UnloadLSP()
-    if exists('g:lsp_loaded')
-        call lsp#disable()
-    endif
-
-    if maparg('gS','n') != '' | execute 'nunmap <buffer> gS' | endif
-
-    setlocal omnifunc<
     setlocal tagfunc<
+    setlocal keywordprg<
+
+    if maparg('<F4>','n') != '' | execute 'nunmap <buffer> <F4>' | endif
+    if maparg('<F9>','n') != '' | execute 'nunmap <buffer> <F9>' | endif
 endfunction
 
 function s:LoadLSP()
-    packadd vim-lsp
-    execute 'helptags $HOME/.vim/pack/prabirshrestha/opt/vim-lsp/doc/'
+    packadd lsp
+    execute 'helptags $HOME/.vim/pack/yegappan/opt/lsp/doc'
 
-    let g:lsp_use_native_client = 1
-    let g:lsp_document_highlight_enabled = 0
-    let g:lsp_diagnostics_enabled = 0
-    let g:lsp_fold_enabled = 0
+    call g:LspOptionsSet(#{
+        \     autoComplete: v:false,
+        \     autoHighlightDiags: v:false,
+        \     highlightDiagInline: v:false,
+        \   })
 
-    nmap <buffer> gS <plug>(lsp-references)
+    setlocal tagfunc=lsp#lsp#TagFunc
+    setlocal keywordprg=:LspHover
 
-    setlocal omnifunc=lsp#complete
-    setlocal tagfunc=lsp#tagfunc
+    nnoremap <buffer> <silent> <F4> <Cmd>LspSwitchSourceHeader<CR>
+    nnoremap <buffer> <silent> <F9> <Cmd>LspDiag highlight toggle<CR>
 endfunction
 
 function s:RegisterClangd()
-    call lsp#register_server({
-        \ 'name': 'clangd',
-        \ 'cmd': {server_info->['clangd', '-background-index']},
-        \ 'allowlist': ['c', 'cpp', 'objc', 'objcpp'],
-        \ })
-
-    call lsp#enable()
+    call g:LspAddServer([#{
+        \    name: 'clangd',
+        \    filetype: ['c', 'cpp'],
+        \    path: exepath('clangd'),
+        \    args: ['--background-index']
+        \  }])
 endfunction
