@@ -69,10 +69,14 @@ set listchars=tab:··,trail:·
 "Configure english and brazilian portuguese spell checking in insert mode completion:
 set spelllang=en,pt_br
 set spellfile=$HOME/.vim/spell/en.utf-8.add,$HOME/.vim/spell/pt.utf-8.add
+set spelloptions+=camel
 set complete+=kspell
 
 "Preserves the cursor column on commands like <C-D>, <C-U> and on buffer switching:
 set nostartofline
+
+"Makes jump list navigation follow a stack-like history:
+set jumpoptions=stack
 
 "Switches to a window/tab containing the buffer instead of making a redundant split:
 set switchbuf=useopen,usetab
@@ -96,9 +100,10 @@ set fillchars=vert:\ ,fold:-
 "Sets the terminal title to the active filename:
 set title
 
-"Show the current line number and relative distances to other lines:
+"Show the number column with relative line distances and merge the sign column:
 set number
 set relativenumber
+set signcolumn=number
 
 "Show the active mode, but not the current command, at the botton of the screen:
 set showmode
@@ -108,9 +113,10 @@ set noshowcmd
 set display-=truncate
 set display+=lastline
 
-"Wrap lines on some special characters, rather than on the last fitting character:
+"Wrap lines on some special characters and preserve indentation:
 set wrap
 set linebreak
+set breakindent
 
 "Sets the maximum line width, in columns, when doing manual formatting:
 set textwidth=79
@@ -125,6 +131,7 @@ set formatoptions+=q
 
 "Automatically insert the comment character only in insert mode:
 set formatoptions+=r
+set formatoptions+=/
 set formatoptions-=o
 
 "Automatically deletes the comment character when joining comment lines:
@@ -187,7 +194,7 @@ set complete-=i
 
 "Add popup info and fuzzy/longest matching to insert mode completion:
 set completeopt-=preview
-set completeopt+=popup,fuzzy,longest
+set completeopt+=popup,fuzzy,nosort,longest
 set completepopup=height:10,width:60
 
 "Sets popup windows in place of preview windows:
@@ -204,11 +211,13 @@ set undodir=$HOME/.vim/undo//
 set directory=$HOME/.vim/swap//
 set viminfo+=n$HOME/.vim/viminfo
 
-"Open split panes to right and bottom:
+"Open split panes to right and bottom and keep text stable:
 set splitright
 set splitbelow
+set splitkeep=screen
 
-"Set the minimum number of visible lines and columns around the cursor:
+"Enable smooth scrolling and set the minimum visible context around the cursor:
+set smoothscroll
 set scrolloff=2
 set sidescroll=1
 set sidescrolloff=2
@@ -217,8 +226,8 @@ set sidescrolloff=2
 set foldenable
 set foldlevelstart=99
 
-"Disables the fold column in diff mode:
-set diffopt+=foldcolumn:0
+"Enables the histogram algorithm with granular line matching in diff mode:
+set diffopt+=algorithm:histogram,linematch:60,foldcolumn:0
 
 "Set a sane colorscheme in diff mode:
 highlight! link DiffDelete Normal
@@ -295,12 +304,7 @@ endfunction
 inoremap <silent><script><nowait><expr> <S-Tab> <SID>CopilotCycleSuggest()
 inoremap <silent><script><nowait><expr> <Tab> copilot#AcceptLine("\<Tab>")
 
-"Create a custom command for launching the Copilot CLI:
-if executable('copilot')
-    command -nargs=* CopilotCLI execute 'vertical terminal ++close copilot ' . <q-args>
-endif
-
-"Replaces the default 'bdelete' commands to prevent closing the last window:
+"Replace the default 'bdelete' commands to prevent closing the last window:
 function s:BufferDelete(bang, args)
     let arglist = empty(a:args) ? [''] : split(a:args)
 
@@ -369,11 +373,11 @@ augroup SmartBufferReload
     autocmd FileChangedShellPost * redraw | echohl WarningMsg | echomsg "File changed on disk. Buffer reloaded." | echohl None
 augroup END
 
-"Unlist certain buftypes:
+"Unlist and fix certain buftypes:
 augroup SmartBufUnlist
     autocmd!
-    autocmd BufWinEnter * if &l:buftype ==# 'quickfix' | setlocal nobuflisted | endif
-    autocmd TerminalOpen,BufWinEnter * if &l:buftype ==# 'terminal' | setlocal nobuflisted | if bufexists('gdb-communication') | call setbufvar('gdb-communication','&buflisted',0) | endif | endif
+    autocmd BufWinEnter * if &l:buftype ==# 'quickfix' | setlocal nobuflisted winfixbuf | endif
+    autocmd TerminalOpen,BufWinEnter * if &l:buftype ==# 'terminal' | setlocal nobuflisted winfixbuf | if bufexists('gdb-communication') | call setbufvar('gdb-communication','&buflisted',0) | endif | endif
 augroup END
 
 "Overwrite filetype-specific format options:
@@ -387,7 +391,7 @@ augroup SmartKeyword
     autocmd!
     autocmd Filetype * setlocal iskeyword<
     autocmd Filetype help if &l:buftype ==# 'help' | setlocal iskeyword=!-~,^*,^\|,^\",192-255 | endif
-    autocmd Filetype matlab setlocal iskeyword+=.
+    autocmd Filetype matlab,octave setlocal iskeyword+=.
     autocmd Filetype tex setlocal iskeyword+=-,:
 augroup END
 
@@ -464,7 +468,8 @@ augroup SmartCompiler
     autocmd Filetype * call s:ResetCompiler()
     autocmd Filetype c,cpp compiler gcc | call s:ConfigCppCompiler()
     autocmd Filetype python compiler pyunit
-    autocmd Filetype plantuml call s:ConfigUmlCompiler()
+    autocmd Filetype plantuml call s:ConfigPlantumlCompiler()
+    autocmd Filetype mermaid call s:ConfigMermaidCompiler()
     autocmd Filetype context let b:tex_flavor='context' | compiler tex
     autocmd Filetype plaintex let b:tex_flavor='plain' | compiler tex
     autocmd Filetype tex let b:tex_flavor='latex' | compiler tex | call s:ConfigTexCompiler()
@@ -490,8 +495,12 @@ function s:ConfigCppCompiler()
     setlocal errorformat+=%-G%.%#
 endfunction
 
-function s:ConfigUmlCompiler()
+function s:ConfigPlantumlCompiler()
     execute 'setlocal makeprg=plantuml\ -charset\ UTF-8\ -noerror\ -tsvg\ '.expand('%:t')
+endfunction
+
+function s:ConfigMermaidCompiler()
+    execute 'setlocal makeprg=mmdc\ --quiet\ --input\ '.expand('%:t').'\ --output\ '.expand('%:r').'.svg'
 endfunction
 
 function s:ConfigTexCompiler()
@@ -599,9 +608,9 @@ endfunction
 "Create filetype-specific custom commands for launching interpreters:
 augroup SmartInterpreterCommand
     autocmd!
-    autocmd Filetype * if exists(':Python') | delcommand Python | endif | if exists(':Matlab') | delcommand Matlab | endif
-    autocmd Filetype python command -buffer Python execute 'vertical terminal ++close python'
-    autocmd Filetype matlab command -buffer Matlab execute 'vertical terminal ++close matlab -nodesktop -nosplash'
+    autocmd Filetype * if exists(':Python') | delcommand Python | endif | if exists(':Octave') | delcommand Octave | endif
+    autocmd Filetype python if executable('python') | command -buffer Python execute 'vertical terminal ++close python' | endif
+    autocmd Filetype matlab,octave if executable('octave') | command -buffer Octave execute 'vertical terminal ++close octave' | endif
 augroup END
 
 "Set filetype-specific patterns for searching macro definitions:
@@ -617,7 +626,7 @@ augroup SmartPath
     autocmd Filetype * call s:ResetPath()
     autocmd Filetype c,cpp call s:SetCppPath()
     autocmd Filetype python call s:SetPythonPath()
-    autocmd Filetype matlab call s:SetMatlabPath()
+    autocmd Filetype matlab,octave call s:SetOctavePath()
     autocmd Filetype tex call s:SetLatexPath()
 augroup END
 
@@ -635,7 +644,7 @@ function s:SetPythonPath()
     execute 'setlocal path+='.pydir
 endfunction
 
-function s:SetMatlabPath()
+function s:SetOctavePath()
     setlocal path+=/usr/share/octave/**
 endfunction
 
