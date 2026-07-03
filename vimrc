@@ -246,10 +246,10 @@ let g:tex_fold_enabled=1    "Enables folding of chapters, sections etc.
 let g:tex_comment_nospell=1 "Disables spell checking in comments
 
 "Tweaks markdown files (enables fenced code block syntax highlighting):
-let g:markdown_fenced_languages = ['vim', 'java', 'cpp', 'python', 'octave=matlab', 'latex=tex', 'sh', 'php']
+let g:markdown_fenced_languages = ['vim', 'java', 'cpp', 'go', 'python', 'plantuml', 'mermaid', 'octave=matlab', 'latex=tex', 'sh', 'php']
 
-"Tweaks rst files (enables fenced code block syntax highlighting):
-let g:rst_syntax_code_list = ['vim', 'java', 'cpp', 'python', 'sh', 'php']
+"Tweaks rst files (enables code block syntax highlighting):
+let g:rst_syntax_code_list = ['vim', 'java', 'cpp', 'go', 'python', 'plantuml', 'mermaid', 'sh', 'php']
 
 "Tweaks sh files (sets the maximum level of folding):
 let g:sh_fold_enabled=7
@@ -268,6 +268,8 @@ let g:netrw_banner=0                                                            
 let g:netrw_altv=1                                                                             "Opens splits to the right
 let g:netrw_alto=1                                                                             "Opens splits to the bottom
 let g:netrw_liststyle=3                                                                        "Makes tree view the default
+let g:netrw_mousemaps=0                                                                        "Disables buggy mouse maps
+let g:netrw_cursor=0                                                                           "Disables cursorline
 
 let s:escape='substitute(escape(v:val, ".$~"), "*", ".*", "g")'
 let g:netrw_list_hide=join(map(split(&wildignore, ','), '"^".' . s:escape . '. "/\\=$"'), ',') "Ignores wildignore'd patterns
@@ -380,6 +382,12 @@ augroup SmartBufUnlist
     autocmd TerminalOpen,BufWinEnter * if &l:buftype ==# 'terminal' | setlocal nobuflisted winfixbuf | if bufexists('gdb-communication') | call setbufvar('gdb-communication','&buflisted',0) | endif | endif
 augroup END
 
+"Enable double-clicking to open files/directories in Netrw:
+augroup SmartNetrw
+    autocmd!
+    autocmd FileType netrw nmap <buffer> <2-LeftMouse> <CR>
+augroup END
+
 "Overwrite filetype-specific format options:
 augroup FormatOptionsOverwrite
     autocmd!
@@ -424,6 +432,7 @@ augroup SmartSuffixes
     autocmd!
     autocmd Filetype * setlocal suffixesadd<
     autocmd Filetype c,cpp setlocal suffixesadd+=.c,.cc,.cpp,.cxx,.ipp,.tcc,.inl,.h,.hh,.hpp,.hxx
+    autocmd Filetype go,gomod,gowork setlocal suffixesadd+=.go
     autocmd Filetype python setlocal suffixesadd+=.py
     autocmd Filetype sh setlocal suffixesadd+=.sh
     autocmd Filetype tex setlocal suffixesadd+=.tex,.bib,.bbl,.ind,.sty,.cls,.bst,.ist
@@ -467,6 +476,7 @@ augroup SmartCompiler
     autocmd!
     autocmd Filetype * call s:ResetCompiler()
     autocmd Filetype c,cpp compiler gcc | call s:ConfigCppCompiler()
+    autocmd Filetype go,gomod,gowork compiler go
     autocmd Filetype python compiler pyunit
     autocmd Filetype plantuml call s:ConfigPlantumlCompiler()
     autocmd Filetype mermaid call s:ConfigMermaidCompiler()
@@ -625,6 +635,7 @@ augroup SmartPath
     autocmd!
     autocmd Filetype * call s:ResetPath()
     autocmd Filetype c,cpp call s:SetCppPath()
+    autocmd Filetype go,gomod,gowork call s:SetGoPath()
     autocmd Filetype python call s:SetPythonPath()
     autocmd Filetype matlab,octave call s:SetOctavePath()
     autocmd Filetype tex call s:SetLatexPath()
@@ -635,13 +646,37 @@ function s:ResetPath()
 endfunction
 
 function s:SetCppPath()
-    silent let cppdir=substitute(system('g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS="/**,"} gsub(/^[ \t]/,"") {print $0}'''),',\+$','','')
-    execute 'setlocal path+='.cppdir
+    if executable('g++')
+        silent let cppdir=substitute(system('g++ -xc++ -E -Wp,-v /dev/null 2>&1 | awk ''BEGIN{ORS="/**,"} gsub(/^[ \t]/,"") {print $0}'''),',\+$','','')
+        execute 'setlocal path+='.cppdir
+    endif
+endfunction
+
+function s:SetGoPath()
+    if executable('go')
+        silent let goroot = substitute(system('go env GOROOT'), '\n\+$', '', '')
+        silent let gopath = substitute(system('go env GOPATH'), '\n\+$', '', '')
+        silent let gomodcache = substitute(system('go env GOMODCACHE'), '\n\+$', '', '')
+
+        if !empty(goroot)
+            execute 'setlocal path+=' . escape(goroot . '/src/**', ' ,')
+        endif
+
+        if !empty(gomodcache)
+            execute 'setlocal path+=' . escape(gomodcache . '/**', ' ,')
+        endif
+
+        for srcdir in map(filter(split(gopath, ':'), '!empty(v:val)'), {_, dir -> dir . '/src/**'})
+            execute 'setlocal path+=' . escape(srcdir, ' ,')
+        endfor
+    endif
 endfunction
 
 function s:SetPythonPath()
-    silent let pydir=substitute(system('python -c "import os, sys; print(''/**,''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','/**','')
-    execute 'setlocal path+='.pydir
+    if executable('python')
+        silent let pydir=substitute(system('python -c "import os, sys; print(''/**,''.join(''{}''.format(d) for d in sys.path if os.path.isdir(d)))"'),'\n\+$','/**','')
+        execute 'setlocal path+='.pydir
+    endif
 endfunction
 
 function s:SetOctavePath()
@@ -683,6 +718,7 @@ augroup SmartLSP
     let s:loadplugins = &loadplugins
     autocmd Filetype * if s:loadplugins | call s:UnloadLSP() | endif
     autocmd Filetype c,cpp if s:loadplugins && executable('clangd') | call s:LoadLSP() | call s:RegisterClangd() | endif
+    autocmd Filetype go,gomod,gowork if s:loadplugins && executable('gopls') | call s:LoadLSP() | call s:RegisterGopls() | endif
 augroup END
 
 function s:UnloadLSP()
@@ -706,15 +742,38 @@ function s:LoadLSP()
     setlocal tagfunc=lsp#lsp#TagFunc
     setlocal keywordprg=:LspHover
 
-    nnoremap <buffer> <silent> <F4> <Cmd>LspSwitchSourceHeader<CR>
     nnoremap <buffer> <silent> <F9> <Cmd>LspDiag highlight toggle<CR>
 endfunction
 
 function s:RegisterClangd()
+    nnoremap <buffer> <silent> <F4> <Cmd>LspSwitchSourceHeader<CR>
+
     call g:LspAddServer([#{
         \    name: 'clangd',
         \    filetype: ['c', 'cpp'],
         \    path: exepath('clangd'),
         \    args: ['--background-index']
         \  }])
+endfunction
+
+function s:RegisterGopls()
+    call g:LspAddServer([#{
+        \    name: 'gopls',
+        \    filetype: ['go', 'gomod', 'gowork'],
+        \    path: exepath('gopls'),
+        \    args: ['serve'],
+        \    syncInit: v:true
+        \  }])
+endfunction
+
+"Format files on save using LSP for certain filetypes:
+augroup SmartFormat
+    autocmd!
+    autocmd BufWritePre *.go,go.mod,go.work call s:FormatWithLSP()
+augroup END
+
+function s:FormatWithLSP()
+    if exists(':LspFormat') && exists('*g:LspServerReady') && g:LspServerReady()
+        execute 'LspFormat'
+    endif
 endfunction
